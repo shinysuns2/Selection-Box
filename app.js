@@ -142,7 +142,16 @@ const el = (id) => document.getElementById(id);
 
 function loadState() {
   try {
-    return { ...defaultState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") };
+    const loaded = { ...defaultState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") };
+    loaded.games = (loaded.games || []).map((g) => ({
+      ...g,
+      playersMin: Number(g.playersMin ?? 1),
+      playersMax: Number(g.playersMax ?? Math.max(2, g.playersMin ?? 2)),
+      difficulty: Number(g.difficulty ?? 3),
+    }));
+    loaded.selectedPlayers = loaded.selectedPlayers || "all";
+    loaded.selectedDifficulty = loaded.selectedDifficulty || "all";
+    return loaded;
   } catch {
     return structuredClone(defaultState);
   }
@@ -258,7 +267,14 @@ function renderBox() {
     .map((g, i) => `<span class="chip">${nameOf(g)} (${g.lengthCm}cm) <button data-remove-idx="${i}">×</button></span>`)
     .join("");
 
-  el("dropZone").innerHTML = selectedGames().map((g) => `<span class="token">${nameOf(g)}</span>`).join("");
+  el("dropZone").innerHTML = selectedGames()
+    .map(
+      (g) => `<figure class="plug-item">
+        <img src="${g.imageUrl}" alt="${nameOf(g)}" />
+        <span>${nameOf(g)}</span>
+      </figure>`
+    )
+    .join("");
 }
 
 function recommendGames() {
