@@ -7,6 +7,8 @@ const i18n = {
     gamesTitle: "게임 목록",
     boxLabel: "박스",
     categoryLabel: "카테고리",
+    playersLabel: "인원수",
+    difficultyLabel: "난이도",
     selectedTitle: "선택 박스",
     usedLabel: "사용",
     remainingLabel: "남음",
@@ -17,6 +19,8 @@ const i18n = {
     manageBoxTitle: "박스 관리",
     manageGameTitle: "게임 관리",
     all: "전체",
+    allPlayers: "전체 인원",
+    allDifficulty: "전체 난이도",
     add: "담기",
     full: "초과됨",
     cancel: "취소",
@@ -27,6 +31,8 @@ const i18n = {
     gamesTitle: "Games",
     boxLabel: "Box",
     categoryLabel: "Category",
+    playersLabel: "Players",
+    difficultyLabel: "Difficulty",
     selectedTitle: "Selected Box",
     usedLabel: "Used",
     remainingLabel: "Remaining",
@@ -37,6 +43,8 @@ const i18n = {
     manageBoxTitle: "Manage Boxes",
     manageGameTitle: "Manage Games",
     all: "All",
+    allPlayers: "All players",
+    allDifficulty: "All difficulties",
     add: "Add",
     full: "Overflow",
     cancel: "Cancel",
@@ -47,6 +55,8 @@ const i18n = {
     gamesTitle: "ゲーム一覧",
     boxLabel: "ボックス",
     categoryLabel: "カテゴリ",
+    playersLabel: "人数",
+    difficultyLabel: "難易度",
     selectedTitle: "選択ボックス",
     usedLabel: "使用",
     remainingLabel: "残り",
@@ -57,6 +67,8 @@ const i18n = {
     manageBoxTitle: "ボックス管理",
     manageGameTitle: "ゲーム管理",
     all: "すべて",
+    allPlayers: "すべての人数",
+    allDifficulty: "すべての難易度",
     add: "追加",
     full: "超過",
     cancel: "キャンセル",
@@ -69,6 +81,8 @@ const defaultState = {
   dark: false,
   selectedBoxId: "b1",
   selectedCategory: "all",
+  selectedPlayers: "all",
+  selectedDifficulty: "all",
   boxes: [
     {
       id: "b1",
@@ -88,6 +102,9 @@ const defaultState = {
       name: { ko: "은하 전략", en: "Galaxy Tactics", ja: "銀河タクティクス" },
       lengthCm: 4.2,
       categoryId: "c1",
+      playersMin: 2,
+      playersMax: 4,
+      difficulty: 4,
       imageUrl: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=300&q=60",
     },
     {
@@ -95,6 +112,9 @@ const defaultState = {
       name: { ko: "파티 큐브", en: "Party Cube", ja: "パーティーキューブ" },
       lengthCm: 2.8,
       categoryId: "c2",
+      playersMin: 3,
+      playersMax: 8,
+      difficulty: 2,
       imageUrl: "https://images.unsplash.com/photo-1603732551681-8f8f8e3b6f7f?auto=format&fit=crop&w=300&q=60",
     },
     {
@@ -102,6 +122,9 @@ const defaultState = {
       name: { ko: "패밀리 트립", en: "Family Trip", ja: "ファミリートリップ" },
       lengthCm: 3.6,
       categoryId: "c3",
+      playersMin: 2,
+      playersMax: 5,
+      difficulty: 3,
       imageUrl: "https://images.unsplash.com/photo-1529480780361-c8cb81eb5735?auto=format&fit=crop&w=300&q=60",
     },
   ],
@@ -154,7 +177,7 @@ function calcUsed() {
 function renderStaticText() {
   [
     "appTitle","gamesTitle","boxLabel","categoryLabel","selectedTitle",
-    "usedLabel","remainingLabel","fillLabel","recommendTitle",
+    "playersLabel","difficultyLabel","usedLabel","remainingLabel","fillLabel","recommendTitle",
     "adminLoginTitle","adminPanelTitle","manageBoxTitle","manageGameTitle"
   ].forEach((k) => (el(k).textContent = text(k)));
   el("cancelBtn").textContent = text("cancel");
@@ -174,6 +197,19 @@ function renderSelectors() {
     .join("");
   catSel.value = state.selectedCategory;
 
+  const playersSet = [...new Set(state.games.map((g) => `${g.playersMin}-${g.playersMax}`))];
+  const playersSel = el("playersSelect");
+  playersSel.innerHTML = [`<option value="all">${text("allPlayers")}</option>`]
+    .concat(playersSet.map((v) => `<option value="${v}">${v.replace("-", "~")}인</option>`))
+    .join("");
+  playersSel.value = state.selectedPlayers;
+
+  const diffSel = el("difficultySelect");
+  diffSel.innerHTML = [`<option value="all">${text("allDifficulty")}</option>`]
+    .concat([1, 2, 3, 4, 5].map((d) => `<option value="${d}">${text("difficultyLabel")} ${d}</option>`))
+    .join("");
+  diffSel.value = state.selectedDifficulty;
+
   el("gameCategory").innerHTML = state.categories
     .map((c) => `<option value="${c.id}">${nameOf(c)}</option>`)
     .join("");
@@ -183,8 +219,12 @@ function renderGames() {
   const q = el("searchInput").value?.trim().toLowerCase() || "";
   const list = state.games.filter((g) => {
     const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
+    const playersOk =
+      state.selectedPlayers === "all" || `${g.playersMin}-${g.playersMax}` === state.selectedPlayers;
+    const difficultyOk =
+      state.selectedDifficulty === "all" || Number(state.selectedDifficulty) === Number(g.difficulty);
     const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
-    return categoryOk && nameOk;
+    return categoryOk && playersOk && difficultyOk && nameOk;
   });
 
   el("gamesList").innerHTML = list
@@ -193,7 +233,7 @@ function renderGames() {
         <img src="${g.imageUrl}" alt="${nameOf(g)}" />
         <div class="meta">
           <div>${nameOf(g)}</div>
-          <small>${g.lengthCm}cm · ${nameOf(state.categories.find((c) => c.id === g.categoryId))}</small>
+          <small>${g.lengthCm}cm · ${nameOf(state.categories.find((c) => c.id === g.categoryId))} · ${g.playersMin}~${g.playersMax}p · Lv.${g.difficulty}</small>
         </div>
         <button class="btn add-btn" data-id="${g.id}">${text("add")}</button>
       </article>`
@@ -250,7 +290,7 @@ function renderRecommend() {
       <img src="${game.imageUrl}" alt="${nameOf(game)}" />
       <div class="meta">
         <div>${nameOf(game)}</div>
-        <small>${game.lengthCm}cm · score ${score.toFixed(2)}</small>
+        <small>${game.lengthCm}cm · ${game.playersMin}~${game.playersMax}p · Lv.${game.difficulty} · score ${score.toFixed(2)}</small>
       </div>
       <button class="btn add-btn" data-id="${game.id}">${text("add")}</button>
     </article>`)
@@ -267,7 +307,7 @@ function renderAdminLists() {
 
   el("gameAdminList").innerHTML = state.games.map((g) => `
     <article class="card">
-      <div>${nameOf(g)} (${g.lengthCm}cm)</div>
+      <div>${nameOf(g)} (${g.lengthCm}cm · ${g.playersMin}~${g.playersMax}p · Lv.${g.difficulty})</div>
       <button class="btn ghost" data-del-game="${g.id}">삭제</button>
     </article>
   `).join("");
@@ -333,6 +373,18 @@ function bind() {
 
   el("categorySelect").addEventListener("change", (e) => {
     state.selectedCategory = e.target.value;
+    persist();
+    renderGames();
+  });
+
+  el("playersSelect").addEventListener("change", (e) => {
+    state.selectedPlayers = e.target.value;
+    persist();
+    renderGames();
+  });
+
+  el("difficultySelect").addEventListener("change", (e) => {
+    state.selectedDifficulty = e.target.value;
     persist();
     renderGames();
   });
@@ -417,6 +469,9 @@ function bind() {
       name: { ko: el("gameNameKo").value, en: el("gameNameEn").value, ja: el("gameNameJa").value },
       lengthCm: Number(el("gameLength").value),
       categoryId: el("gameCategory").value,
+      playersMin: Number(el("gamePlayersMin").value),
+      playersMax: Number(el("gamePlayersMax").value),
+      difficulty: Number(el("gameDifficulty").value),
       imageUrl: el("gameImageUrl").value,
     });
     persist();
