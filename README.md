@@ -8,6 +8,7 @@ A lightweight web app prototype for planning game selections in 1D boxes (cm-bas
 - Players filter and difficulty filter
 - Fill/remaining indicators based on selected box length
 - Recommendation engine (fit + category/compatibility score)
+- In-box cover image stacking with plug-in animation on add
 - Admin login modal (prototype password: `boxadmin`)
 - Multilingual UI: Korean, English, Japanese
 - Comfortable light/dark theme toggle
