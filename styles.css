@@ -89,33 +89,37 @@ body {
   inset: 0;
   padding: 10px;
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-end;
-  align-items: flex-end;
-  gap: 6px;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 4px;
 }
 .plug-item {
-  width: 54px;
-  height: 72px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
-  transform-origin: bottom center;
-  animation: plugIn 340ms cubic-bezier(.2,.8,.2,1);
-}
-.plug-item img {
-  width: 100%;
+  position: relative;
   height: 100%;
-  object-fit: cover;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+  transform-origin: left center;
+  animation: plugIn 340ms cubic-bezier(.2,.8,.2,1);
+  background-size: cover;
+  background-position: center;
 }
-.plug-item span {
+.plug-item::after {
+  content: "";
   position: absolute;
-  left: -9999px;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,.12), rgba(0,0,0,.12));
+}
+.empty-slot {
+  height: 100%;
+  border-radius: 6px;
+  background: rgba(107, 114, 128, 0.45);
+  border: 1px dashed rgba(255, 255, 255, 0.45);
 }
 @keyframes plugIn {
-  from { transform: translateY(22px) scale(0.85) rotate(-6deg); opacity: 0; }
-  to { transform: translateY(0) scale(1) rotate(0); opacity: 1; }
+  from { transform: scaleX(0.2); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
 }
 .progress { background: var(--border); height: 10px; border-radius: 999px; overflow: hidden; }
 #progressBar { background: linear-gradient(90deg, #5a67d8, #6aa6ff); width: 0%; height: 100%; transition: width .3s ease; }
