@@ -38,6 +38,14 @@
             <span id="categoryLabel">카테고리</span>
             <select id="categorySelect"></select>
           </label>
+          <label>
+            <span id="playersLabel">인원수</span>
+            <select id="playersSelect"></select>
+          </label>
+          <label>
+            <span id="difficultyLabel">난이도</span>
+            <select id="difficultySelect"></select>
+          </label>
         </div>
         <div id="gamesList" class="list"></div>
       </section>
@@ -100,6 +108,15 @@
             <input id="gameNameJa" placeholder="ゲーム(ja)" required />
             <input id="gameLength" type="number" min="0.1" step="0.1" placeholder="length cm" required />
             <input id="gameImageUrl" placeholder="image url" required />
+            <input id="gamePlayersMin" type="number" min="1" step="1" placeholder="min players" required />
+            <input id="gamePlayersMax" type="number" min="1" step="1" placeholder="max players" required />
+            <select id="gameDifficulty">
+              <option value="1">난이도 1</option>
+              <option value="2">난이도 2</option>
+              <option value="3" selected>난이도 3</option>
+              <option value="4">난이도 4</option>
+              <option value="5">난이도 5</option>
+            </select>
             <select id="gameCategory"></select>
             <button class="btn" id="saveGameBtn">저장</button>
           </form>
