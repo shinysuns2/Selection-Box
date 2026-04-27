@@ -5,6 +5,7 @@ A lightweight web app prototype for planning game selections in 1D boxes (cm-bas
 - Box size and image management
 - Game size/category/image management
 - Category filter and search
+- Players filter and difficulty filter
 - Fill/remaining indicators based on selected box length
 - Recommendation engine (fit + category/compatibility score)
 - Admin login modal (prototype password: `boxadmin`)
