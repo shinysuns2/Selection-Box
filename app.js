@@ -2,7 +2,6 @@ const ADMIN_EMAIL = "ryan@playte.com";
 const SUPABASE_URL = "https://nzvmiwfdpjpkamyisvoc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_84BLwfndOfmoVsgpy7Pr-Q_b5iBRqXS";
 const LOCAL_KEY = "selection-box-local-v2";
-const GAMES_PAGE_SIZE = 24;
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const i18n = {
@@ -29,6 +28,7 @@ const i18n = {
     full: "초과됨",
     overflowMsg: "남은 공간이 부족해서 담을 수 없습니다.",
     noFitRecommend: "남은 공간에 들어가는 추천 게임이 없습니다.",
+    noRecommend: "추천게임이 없습니다.",
     diff_beginner: "초보자",
     diff_intermediate: "중급자",
     diff_advanced: "고급자",
@@ -61,6 +61,7 @@ const i18n = {
     full: "Overflow",
     overflowMsg: "Not enough remaining space to add this game.",
     noFitRecommend: "No recommended games fit in the remaining space.",
+    noRecommend: "No recommended games.",
     diff_beginner: "Gateway",
     diff_intermediate: "Mid-weight",
     diff_advanced: "Heavy",
@@ -93,6 +94,7 @@ const i18n = {
     full: "超過",
     overflowMsg: "残り容量が足りないため追加できません。",
     noFitRecommend: "残り容量に収まるおすすめゲームがありません。",
+    noRecommend: "おすすめゲームがありません。",
     diff_beginner: "入門",
     diff_intermediate: "中量級",
     diff_advanced: "重量級",
@@ -178,7 +180,7 @@ const defaultState = {
 let state = loadState();
 let editingBoxId = null;
 let editingGameId = null;
-let gamesRenderCount = GAMES_PAGE_SIZE;
+let gamesRenderCount = Number.MAX_SAFE_INTEGER;
 
 const el = (id) => document.getElementById(id);
 
@@ -442,7 +444,6 @@ function renderGames() {
   const visible = list.slice(0, gamesRenderCount);
 
   el("gamesList").innerHTML = list
-    .slice(0, gamesRenderCount)
     .map(
       (g) => `<article class="card" data-game-id="${g.id}">
         <img src="${g.imageUrl}" alt="${nameOf(g)}" loading="lazy" decoding="async" />
@@ -454,11 +455,6 @@ function renderGames() {
       </article>`
     )
     .join("");
-
-  const loadMoreBtn = el("loadMoreGamesBtn");
-  const hasMore = list.length > visible.length;
-  loadMoreBtn.hidden = !hasMore;
-  loadMoreBtn.textContent = state.lang === "ko" ? `더 보기 (${visible.length}/${list.length})` : `Load more (${visible.length}/${list.length})`;
 }
 
 function renderBox() {
@@ -482,10 +478,12 @@ function renderBox() {
     .join("");
 
   const filledHtml = selectedGames()
-    .map((g) => {
-      const widthPct = (Number(g.lengthCm) / box.lengthCm) * 100;
-      return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${g.boxImageUrl || g.imageUrl}')"></figure>`;
-    })
+    .map(
+      (g) => {
+        const widthPct = (Number(g.lengthCm) / box.lengthCm) * 100;
+        return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${g.boxImageUrl || g.imageUrl}')"></figure>`;
+      }
+    )
     .join("");
   const emptyPct = Math.max(0, (remain / box.lengthCm) * 100);
   const emptyHtml = emptyPct > 0.01 ? `<div class="empty-slot" style="width:${emptyPct}%; flex:0 0 ${emptyPct}%"></div>` : "";
@@ -544,7 +542,7 @@ function renderRecommend() {
   }
   const items = recommendGames();
   if (!items.length) {
-    el("recommendList").innerHTML = "";
+    el("recommendList").innerHTML = `<article class="card notice"><div class="meta"><small>${text("noRecommend")}</small></div></article>`;
     return;
   }
   el("recommendList").innerHTML = items
@@ -633,9 +631,7 @@ function render() {
 function bind() {
   let searchTimer = null;
 
-  const resetGamePaging = () => {
-    gamesRenderCount = GAMES_PAGE_SIZE;
-  };
+  const resetGamePaging = () => {};
 
   el("languageSelect").addEventListener("change", (e) => {
     state.lang = e.target.value;
@@ -685,17 +681,11 @@ function bind() {
     }, 120);
   });
 
-  el("loadMoreGamesBtn").addEventListener("click", () => {
-    gamesRenderCount += GAMES_PAGE_SIZE;
-    renderGames();
-  });
-
   el("resetFiltersBtn").addEventListener("click", () => {
     el("searchInput").value = "";
     state.selectedCategory = "all";
     state.selectedPlayers = "all";
     state.selectedDifficulty = "all";
-    gamesRenderCount = GAMES_PAGE_SIZE;
     persist();
     render();
   });
