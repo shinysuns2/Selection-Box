@@ -1,5 +1,8 @@
-const ADMIN_PASSWORD = "boxadmin";
-const STORAGE_KEY = "selection-box-app-v1";
+const ADMIN_EMAIL = "ryan@playte.com";
+const SUPABASE_URL = "https://nzvmiwfdpjpkamyisvoc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_84BLwfndOfmoVsgpy7Pr-Q_b5iBRqXS";
+const LOCAL_KEY = "selection-box-local-v2";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const i18n = {
   ko: {
@@ -148,7 +151,8 @@ const el = (id) => document.getElementById(id);
 
 function loadState() {
   try {
-    const loaded = { ...defaultState, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") };
+    const local = JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}");
+    const loaded = { ...defaultState, ...local };
     loaded.games = (loaded.games || []).map((g) => ({
       ...g,
       playersMin: Number(g.playersMin ?? 1),
@@ -165,7 +169,18 @@ function loadState() {
 }
 
 function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(
+    LOCAL_KEY,
+    JSON.stringify({
+      lang: state.lang,
+      dark: state.dark,
+      selectedBoxId: state.selectedBoxId,
+      selectedCategory: state.selectedCategory,
+      selectedPlayers: state.selectedPlayers,
+      selectedDifficulty: state.selectedDifficulty,
+      selectedGameIds: state.selectedGameIds,
+    })
+  );
 }
 
 function fileToDataUrl(file) {
@@ -184,6 +199,47 @@ function text(key) {
 
 function nameOf(item) {
   return item?.name?.[state.lang] || item?.name?.ko || "-";
+}
+
+async function fetchSharedData() {
+  const [{ data: categories }, { data: boxes }, { data: games }] = await Promise.all([
+    supabaseClient.from("categories").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
+    supabaseClient.from("boxes").select("*").eq("is_active", true).order("created_at", { ascending: true }),
+    supabaseClient.from("games").select("*").eq("is_active", true).order("created_at", { ascending: true }),
+  ]);
+
+  if (categories?.length) {
+    state.categories = categories.map((c) => ({
+      id: c.id,
+      name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja },
+    }));
+  }
+  if (boxes?.length) {
+    state.boxes = boxes.map((b) => ({
+      id: b.id,
+      name: { ko: b.name_ko, en: b.name_en, ja: b.name_ja },
+      lengthCm: Number(b.length_cm),
+      imageUrl: b.image_url || "",
+    }));
+  }
+  if (games?.length) {
+    state.games = games.map((g) => ({
+      id: g.id,
+      name: { ko: g.name_ko, en: g.name_en, ja: g.name_ja },
+      lengthCm: Number(g.length_cm),
+      categoryId: g.category_id,
+      playersMin: Number(g.players_min),
+      playersMax: Number(g.players_max),
+      difficulty: Number(g.difficulty),
+      imageUrl: g.image_url,
+    }));
+  }
+
+  if (!state.boxes.find((b) => b.id === state.selectedBoxId)) {
+    state.selectedBoxId = state.boxes[0]?.id || defaultState.selectedBoxId;
+  }
+  state.selectedGameIds = state.selectedGameIds.filter((id) => state.games.some((g) => g.id === id));
+  persist();
 }
 
 function selectedBox() {
@@ -440,7 +496,7 @@ function bind() {
 
   el("searchInput").addEventListener("input", renderGames);
 
-  document.body.addEventListener("click", (e) => {
+  document.body.addEventListener("click", async (e) => {
     const addBtn = e.target.closest(".add-btn");
     if (addBtn) {
       const card = addBtn.closest(".card");
@@ -460,9 +516,9 @@ function bind() {
 
     const delBox = e.target.closest("[data-del-box]");
     if (delBox) {
-      state.boxes = state.boxes.filter((b) => b.id !== delBox.dataset.delBox);
-      if (!state.boxes.length) state.boxes.push(structuredClone(defaultState.boxes[0]));
-      state.selectedBoxId = state.boxes[0].id;
+      await supabaseClient.from("boxes").delete().eq("id", delBox.dataset.delBox);
+      await fetchSharedData();
+      state.selectedBoxId = state.boxes[0]?.id || defaultState.selectedBoxId;
       persist();
       render();
       return;
@@ -470,8 +526,8 @@ function bind() {
 
     const delGame = e.target.closest("[data-del-game]");
     if (delGame) {
-      state.games = state.games.filter((g) => g.id !== delGame.dataset.delGame);
-      state.selectedGameIds = state.selectedGameIds.filter((id) => id !== delGame.dataset.delGame);
+      await supabaseClient.from("games").delete().eq("id", delGame.dataset.delGame);
+      await fetchSharedData();
       persist();
       render();
     }
@@ -480,17 +536,23 @@ function bind() {
   const dialog = el("adminDialog");
   el("adminBtn").addEventListener("click", () => dialog.showModal());
 
-  el("adminLoginForm").addEventListener("submit", (e) => {
+  el("adminLoginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (el("adminPassword").value === ADMIN_PASSWORD) {
+    const password = el("adminPassword").value;
+    const { error } = await supabaseClient.auth.signInWithPassword({
+      email: ADMIN_EMAIL,
+      password,
+    });
+    if (!error) {
       el("adminPanel").hidden = false;
       el("adminLoginForm").hidden = true;
     } else {
-      alert("wrong password");
+      alert("로그인 실패: 어드민 비밀번호를 확인해주세요.");
     }
   });
 
-  el("logoutBtn").addEventListener("click", () => {
+  el("logoutBtn").addEventListener("click", async () => {
+    await supabaseClient.auth.signOut();
     el("adminPanel").hidden = true;
     el("adminLoginForm").hidden = false;
     el("adminPassword").value = "";
@@ -503,13 +565,15 @@ function bind() {
     const urlImage = el("boxImageUrl").value.trim();
     const imageUrl = fileImage || urlImage;
 
-    const n = Date.now().toString(36);
-    state.boxes.push({
-      id: `b${n}`,
-      name: { ko: el("boxNameKo").value, en: el("boxNameEn").value, ja: el("boxNameJa").value },
-      lengthCm: Number(el("boxLength").value),
-      imageUrl,
+    await supabaseClient.from("boxes").insert({
+      name_ko: el("boxNameKo").value,
+      name_en: el("boxNameEn").value,
+      name_ja: el("boxNameJa").value,
+      length_cm: Number(el("boxLength").value),
+      image_url: imageUrl || null,
+      is_active: true,
     });
+    await fetchSharedData();
     persist();
     e.target.reset();
     render();
@@ -526,22 +590,29 @@ function bind() {
       return;
     }
 
-    const n = Date.now().toString(36);
-    state.games.push({
-      id: `g${n}`,
-      name: { ko: el("gameNameKo").value, en: el("gameNameEn").value, ja: el("gameNameJa").value },
-      lengthCm: Number(el("gameLength").value),
-      categoryId: el("gameCategory").value,
-      playersMin: Number(el("gamePlayersMin").value),
-      playersMax: Number(el("gamePlayersMax").value),
+    await supabaseClient.from("games").insert({
+      name_ko: el("gameNameKo").value,
+      name_en: el("gameNameEn").value,
+      name_ja: el("gameNameJa").value,
+      length_cm: Number(el("gameLength").value),
+      category_id: el("gameCategory").value,
+      players_min: Number(el("gamePlayersMin").value),
+      players_max: Number(el("gamePlayersMax").value),
       difficulty: Number(el("gameDifficulty").value),
-      imageUrl,
+      image_url: imageUrl,
+      is_active: true,
     });
+    await fetchSharedData();
     persist();
     e.target.reset();
     render();
   });
 }
 
-bind();
-render();
+async function init() {
+  bind();
+  await fetchSharedData();
+  render();
+}
+
+init();
