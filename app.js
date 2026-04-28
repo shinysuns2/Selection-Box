@@ -2,6 +2,7 @@ const ADMIN_EMAIL = "ryan@playte.com";
 const SUPABASE_URL = "https://nzvmiwfdpjpkamyisvoc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_84BLwfndOfmoVsgpy7Pr-Q_b5iBRqXS";
 const LOCAL_KEY = "selection-box-local-v2";
+const GAMES_PAGE_SIZE = 24;
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const i18n = {
@@ -168,6 +169,7 @@ const defaultState = {
 let state = loadState();
 let editingBoxId = null;
 let editingGameId = null;
+let gamesRenderCount = GAMES_PAGE_SIZE;
 
 const el = (id) => document.getElementById(id);
 
@@ -210,7 +212,31 @@ function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file) return resolve("");
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onload = async () => {
+      const raw = String(reader.result || "");
+      if (!file.type?.startsWith("image/")) return resolve(raw);
+
+      try {
+        const img = new Image();
+        img.onload = () => {
+          const maxSide = 1200;
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL("image/webp", 0.8);
+          resolve(compressed || raw);
+        };
+        img.onerror = () => resolve(raw);
+        img.src = raw;
+      } catch {
+        resolve(raw);
+      }
+    };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
@@ -393,11 +419,13 @@ function renderGames() {
     const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
     return categoryOk && playersOk && difficultyOk && nameOk;
   });
+  const visible = list.slice(0, gamesRenderCount);
 
   el("gamesList").innerHTML = list
+    .slice(0, gamesRenderCount)
     .map(
       (g) => `<article class="card" data-game-id="${g.id}">
-        <img src="${g.imageUrl}" alt="${nameOf(g)}" />
+        <img src="${g.imageUrl}" alt="${nameOf(g)}" loading="lazy" decoding="async" />
         <div class="meta">
           <div>${nameOf(g)}</div>
           <small>${g.lengthCm}cm · ${nameOf(state.categories.find((c) => c.id === g.categoryId))} · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)}</small>
@@ -406,6 +434,11 @@ function renderGames() {
       </article>`
     )
     .join("");
+
+  const loadMoreBtn = el("loadMoreGamesBtn");
+  const hasMore = list.length > visible.length;
+  loadMoreBtn.hidden = !hasMore;
+  loadMoreBtn.textContent = state.lang === "ko" ? `더 보기 (${visible.length}/${list.length})` : `Load more (${visible.length}/${list.length})`;
 }
 
 function renderBox() {
@@ -470,7 +503,7 @@ function renderRecommend() {
   }
   el("recommendList").innerHTML = items
     .map(({ game, score }) => `<article class="card">
-      <img src="${game.imageUrl}" alt="${nameOf(game)}" />
+      <img src="${game.imageUrl}" alt="${nameOf(game)}" loading="lazy" decoding="async" />
       <div class="meta">
         <div>${nameOf(game)}</div>
         <small>${game.lengthCm}cm · ${game.playersMin}~${game.playersMax}p · ${difficultyLabel(game.difficulty)} · score ${score.toFixed(2)}</small>
@@ -543,6 +576,12 @@ function render() {
 }
 
 function bind() {
+  let searchTimer = null;
+
+  const resetGamePaging = () => {
+    gamesRenderCount = GAMES_PAGE_SIZE;
+  };
+
   el("languageSelect").addEventListener("change", (e) => {
     state.lang = e.target.value;
     persist();
@@ -564,23 +603,37 @@ function bind() {
 
   el("categorySelect").addEventListener("change", (e) => {
     state.selectedCategory = e.target.value;
+    resetGamePaging();
     persist();
     renderGames();
   });
 
   el("playersSelect").addEventListener("change", (e) => {
     state.selectedPlayers = e.target.value;
+    resetGamePaging();
     persist();
     renderGames();
   });
 
   el("difficultySelect").addEventListener("change", (e) => {
     state.selectedDifficulty = e.target.value;
+    resetGamePaging();
     persist();
     renderGames();
   });
 
-  el("searchInput").addEventListener("input", renderGames);
+  el("searchInput").addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      resetGamePaging();
+      renderGames();
+    }, 120);
+  });
+
+  el("loadMoreGamesBtn").addEventListener("click", () => {
+    gamesRenderCount += GAMES_PAGE_SIZE;
+    renderGames();
+  });
 
   document.body.addEventListener("click", async (e) => {
     const addBtn = e.target.closest(".add-btn");
