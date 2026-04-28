@@ -115,6 +115,7 @@ const defaultState = {
       playersMax: 4,
       difficulty: 4,
       imageUrl: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=300&q=60",
+      boxImageUrl: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=300&q=60",
     },
     {
       id: "g2",
@@ -125,6 +126,7 @@ const defaultState = {
       playersMax: 8,
       difficulty: 2,
       imageUrl: "https://images.unsplash.com/photo-1603732551681-8f8f8e3b6f7f?auto=format&fit=crop&w=300&q=60",
+      boxImageUrl: "https://images.unsplash.com/photo-1603732551681-8f8f8e3b6f7f?auto=format&fit=crop&w=300&q=60",
     },
     {
       id: "g3",
@@ -135,6 +137,7 @@ const defaultState = {
       playersMax: 5,
       difficulty: 3,
       imageUrl: "https://images.unsplash.com/photo-1529480780361-c8cb81eb5735?auto=format&fit=crop&w=300&q=60",
+      boxImageUrl: "https://images.unsplash.com/photo-1529480780361-c8cb81eb5735?auto=format&fit=crop&w=300&q=60",
     },
   ],
   compat: [
@@ -160,6 +163,7 @@ function loadState() {
       playersMin: Number(g.playersMin ?? 1),
       playersMax: Number(g.playersMax ?? Math.max(2, g.playersMin ?? 2)),
       difficulty: Number(g.difficulty ?? 3),
+      boxImageUrl: g.boxImageUrl || g.imageUrl,
     }));
     loaded.boxes = (loaded.boxes || []).map((b) => ({ ...b, imageUrl: b.imageUrl || "" }));
     loaded.selectedPlayers = loaded.selectedPlayers || "all";
@@ -253,6 +257,7 @@ async function fetchSharedData() {
       playersMax: Number(g.players_max),
       difficulty: Number(g.difficulty),
       imageUrl: g.image_url,
+      boxImageUrl: g.box_image_url || g.image_url,
     }));
   }
 
@@ -368,7 +373,7 @@ function renderBox() {
   const filledHtml = selectedGames()
     .map((g) => {
       const widthPct = (Number(g.lengthCm) / box.lengthCm) * 100;
-      return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${g.imageUrl}')"></figure>`;
+      return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${g.boxImageUrl || g.imageUrl}')"></figure>`;
     })
     .join("");
   const emptyPct = Math.max(0, (remain / box.lengthCm) * 100);
@@ -581,6 +586,7 @@ function bind() {
       el("gameNameJa").value = game.name.ja || "";
       el("gameLength").value = game.lengthCm;
       el("gameImageUrl").value = game.imageUrl || "";
+      el("gameBoxImageUrl").value = game.boxImageUrl || "";
       el("gamePlayersMin").value = game.playersMin || 1;
       el("gamePlayersMax").value = game.playersMax || 1;
       el("gameDifficulty").value = String(game.difficulty || 3);
@@ -644,11 +650,15 @@ function bind() {
     const file = el("gameImageFile").files?.[0];
     const fileImage = await fileToDataUrl(file);
     const urlImage = el("gameImageUrl").value.trim();
-    const imageUrl = fileImage || urlImage;
-    if (!imageUrl) {
+    const listImageUrl = fileImage || urlImage;
+    if (!listImageUrl) {
       alert("게임 이미지 파일 업로드 또는 URL 입력이 필요합니다.");
       return;
     }
+    const boxFile = el("gameBoxImageFile").files?.[0];
+    const boxFileImage = await fileToDataUrl(boxFile);
+    const boxUrlImage = el("gameBoxImageUrl").value.trim();
+    const boxImageUrl = boxFileImage || boxUrlImage || listImageUrl;
 
     const rawCategoryId = el("gameCategory").value;
     const categoryId = isUuid(rawCategoryId) ? rawCategoryId : null;
@@ -665,12 +675,16 @@ function bind() {
       players_min: Number(el("gamePlayersMin").value),
       players_max: Number(el("gamePlayersMax").value),
       difficulty: Number(el("gameDifficulty").value),
-      image_url: imageUrl,
+      image_url: listImageUrl,
+      box_image_url: boxImageUrl,
       is_active: true,
     };
     const { error } = editingGameId
       ? await supabaseClient.from("games").update(payload).eq("id", editingGameId)
       : await supabaseClient.from("games").insert(payload);
+    if (error?.message?.includes("box_image_url")) {
+      alert("Supabase games 테이블에 box_image_url 컬럼을 추가해주세요. SQL: alter table public.games add column if not exists box_image_url text;");
+    }
     raiseIfError(error, editingGameId ? "게임 수정 실패" : "게임 추가 실패");
     await fetchSharedData();
     persist();
