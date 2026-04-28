@@ -537,17 +537,21 @@ function recommendGames() {
 }
 
 function renderRecommend() {
+  const box = selectedBox();
+  if (!box || selectedGames().length === 0) {
+    el("recommendList").innerHTML = "";
+    return;
+  }
   const items = recommendGames();
   if (!items.length) {
-    el("recommendList").innerHTML = `<article class="card notice"><div class="meta"><small>${text("noFitRecommend")}</small></div></article>`;
+    el("recommendList").innerHTML = "";
     return;
   }
   el("recommendList").innerHTML = items
-    .map(({ game, fitGap, totalScore, difficultyScore, mechanismScore, playerScore }, idx) => `<article class="card">
+    .map(({ game }) => `<article class="card">
       <img src="${game.imageUrl}" alt="${nameOf(game)}" loading="lazy" decoding="async" />
       <div class="meta">
-        <div>${idx + 1}순위 · ${nameOf(game)} (${totalScore}점)</div>
-        <small>${game.lengthCm}cm · ${game.playersMin}~${game.playersMax}p · ${difficultyLabel(game.difficulty)} · 난이도 ${difficultyScore} · 메커니즘 ${mechanismScore} · 인원 ${playerScore} · gap ${fitGap.toFixed(1)}cm</small>
+        <div>${nameOf(game)}</div>
       </div>
       <button class="btn add-btn" data-id="${game.id}">${text("add")}</button>
     </article>`)
