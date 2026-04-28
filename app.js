@@ -32,6 +32,7 @@ const i18n = {
     diff_beginner: "초보자",
     diff_intermediate: "중급자",
     diff_advanced: "고급자",
+    resetFilters: "필터 초기화",
     cancel: "취소",
     login: "로그인",
   },
@@ -61,6 +62,7 @@ const i18n = {
     diff_beginner: "Gateway",
     diff_intermediate: "Mid-weight",
     diff_advanced: "Heavy",
+    resetFilters: "Reset filters",
     cancel: "Cancel",
     login: "Login",
   },
@@ -90,6 +92,7 @@ const i18n = {
     diff_beginner: "入門",
     diff_intermediate: "中量級",
     diff_advanced: "重量級",
+    resetFilters: "絞り込み解除",
     cancel: "キャンセル",
     login: "ログイン",
   },
@@ -355,6 +358,7 @@ function renderStaticText() {
   el("selectedTitle").textContent = "Selection Box";
   el("cancelBtn").textContent = text("cancel");
   el("loginBtn").textContent = text("login");
+  el("resetFiltersBtn").textContent = text("resetFilters");
   const diffOpts = el("gameDifficulty")?.options;
   if (diffOpts?.length >= 3) {
     diffOpts[0].textContent = text("diff_beginner");
@@ -633,6 +637,16 @@ function bind() {
   el("loadMoreGamesBtn").addEventListener("click", () => {
     gamesRenderCount += GAMES_PAGE_SIZE;
     renderGames();
+  });
+
+  el("resetFiltersBtn").addEventListener("click", () => {
+    el("searchInput").value = "";
+    state.selectedCategory = "all";
+    state.selectedPlayers = "all";
+    state.selectedDifficulty = "all";
+    gamesRenderCount = GAMES_PAGE_SIZE;
+    persist();
+    render();
   });
 
   document.body.addEventListener("click", async (e) => {
