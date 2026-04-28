@@ -146,6 +146,8 @@ const defaultState = {
 };
 
 let state = loadState();
+let editingBoxId = null;
+let editingGameId = null;
 
 const el = (id) => document.getElementById(id);
 
@@ -419,6 +421,7 @@ function renderAdminLists() {
   el("boxAdminList").innerHTML = state.boxes.map((b) => `
     <article class="card">
       <div>${nameOf(b)} (${b.lengthCm}cm)</div>
+      <button class="btn ghost" data-edit-box="${b.id}">수정</button>
       <button class="btn ghost" data-del-box="${b.id}">삭제</button>
     </article>
   `).join("");
@@ -426,6 +429,7 @@ function renderAdminLists() {
   el("gameAdminList").innerHTML = state.games.map((g) => `
     <article class="card">
       <div>${nameOf(g)} (${g.lengthCm}cm · ${g.playersMin}~${g.playersMax}p · Lv.${g.difficulty})</div>
+      <button class="btn ghost" data-edit-game="${g.id}">수정</button>
       <button class="btn ghost" data-del-game="${g.id}">삭제</button>
     </article>
   `).join("");
@@ -551,6 +555,36 @@ function bind() {
       await fetchSharedData();
       persist();
       render();
+      return;
+    }
+
+    const editBox = e.target.closest("[data-edit-box]");
+    if (editBox) {
+      const box = state.boxes.find((b) => b.id === editBox.dataset.editBox);
+      if (!box) return;
+      editingBoxId = box.id;
+      el("boxNameKo").value = box.name.ko || "";
+      el("boxNameEn").value = box.name.en || "";
+      el("boxNameJa").value = box.name.ja || "";
+      el("boxLength").value = box.lengthCm;
+      el("boxImageUrl").value = box.imageUrl || "";
+      return;
+    }
+
+    const editGame = e.target.closest("[data-edit-game]");
+    if (editGame) {
+      const game = state.games.find((g) => g.id === editGame.dataset.editGame);
+      if (!game) return;
+      editingGameId = game.id;
+      el("gameNameKo").value = game.name.ko || "";
+      el("gameNameEn").value = game.name.en || "";
+      el("gameNameJa").value = game.name.ja || "";
+      el("gameLength").value = game.lengthCm;
+      el("gameImageUrl").value = game.imageUrl || "";
+      el("gamePlayersMin").value = game.playersMin || 1;
+      el("gamePlayersMax").value = game.playersMax || 1;
+      el("gameDifficulty").value = String(game.difficulty || 3);
+      if (game.categoryId) el("gameCategory").value = game.categoryId;
     }
   });
 
@@ -586,17 +620,21 @@ function bind() {
     const urlImage = el("boxImageUrl").value.trim();
     const imageUrl = fileImage || urlImage;
 
-    const { error } = await supabaseClient.from("boxes").insert({
+    const payload = {
       name_ko: el("boxNameKo").value,
       name_en: el("boxNameEn").value,
       name_ja: el("boxNameJa").value,
       length_cm: Number(el("boxLength").value),
       image_url: imageUrl || null,
       is_active: true,
-    });
-    raiseIfError(error, "박스 추가 실패");
+    };
+    const { error } = editingBoxId
+      ? await supabaseClient.from("boxes").update(payload).eq("id", editingBoxId)
+      : await supabaseClient.from("boxes").insert(payload);
+    raiseIfError(error, editingBoxId ? "박스 수정 실패" : "박스 추가 실패");
     await fetchSharedData();
     persist();
+    editingBoxId = null;
     e.target.reset();
     render();
   });
@@ -618,7 +656,7 @@ function bind() {
       alert("카테고리 UUID가 없어 기본 카테고리 없이 저장됩니다. (Supabase categories 테이블을 먼저 채워주세요)");
     }
 
-    const { error } = await supabaseClient.from("games").insert({
+    const payload = {
       name_ko: el("gameNameKo").value,
       name_en: el("gameNameEn").value,
       name_ja: el("gameNameJa").value,
@@ -629,10 +667,14 @@ function bind() {
       difficulty: Number(el("gameDifficulty").value),
       image_url: imageUrl,
       is_active: true,
-    });
-    raiseIfError(error, "게임 추가 실패");
+    };
+    const { error } = editingGameId
+      ? await supabaseClient.from("games").update(payload).eq("id", editingGameId)
+      : await supabaseClient.from("games").insert(payload);
+    raiseIfError(error, editingGameId ? "게임 수정 실패" : "게임 추가 실패");
     await fetchSharedData();
     persist();
+    editingGameId = null;
     e.target.reset();
     render();
   });
