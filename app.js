@@ -441,6 +441,7 @@ function renderGames() {
     const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
     return categoryOk && playersOk && difficultyOk && nameOk;
   });
+  const visible = list.slice(0, gamesRenderCount);
 
   el("gamesList").innerHTML = list
     .map(
@@ -541,7 +542,7 @@ function renderRecommend() {
   }
   const items = recommendGames();
   if (!items.length) {
-    el("recommendList").innerHTML = `<article class="card notice"><div class="meta"><small>${text("noRecommend")}</small></div></article>`;
+    el("recommendList").innerHTML = `<p class="recommend-empty">${text("noRecommend")}</p>`;
     return;
   }
   el("recommendList").innerHTML = items
