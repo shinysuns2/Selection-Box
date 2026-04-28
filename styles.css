@@ -47,6 +47,7 @@ body {
 .row { display: flex; gap: 10px; margin-bottom: 10px; }
 .between { justify-content: space-between; align-items: center; }
 .list { display: grid; gap: 8px; max-height: 58vh; overflow: auto; }
+#loadMoreGamesBtn { margin-top: 10px; width: 100%; }
 .card {
   border: 1px solid var(--border);
   border-radius: 10px;
