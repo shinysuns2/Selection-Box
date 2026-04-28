@@ -33,9 +33,14 @@ body {
 .top-controls { display: flex; gap: 10px; align-items: center; }
 .layout {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
+  grid-template-columns: 2.4fr 1fr;
   gap: 12px;
   padding: 12px;
+}
+.capture-area {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 12px;
 }
 .panel {
   background: var(--panel);
@@ -156,6 +161,7 @@ dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius
 }
 @media (max-width: 1024px) {
   .layout { grid-template-columns: 1fr; }
+  .capture-area { grid-template-columns: 1fr; }
   .panel { min-height: auto; }
 }
 
