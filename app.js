@@ -262,10 +262,20 @@ async function fetchSharedData() {
   const { data: games } = gameRes;
 
   if (categories?.length) {
-    state.categories = categories.map((c) => ({
+    const mapped = categories.map((c) => ({
       id: c.id,
       name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja },
     }));
+    const hasMisc = mapped.some((c) => {
+      const ko = c.name?.ko || "";
+      const en = c.name?.en || "";
+      const ja = c.name?.ja || "";
+      return ko.includes("기타") || /other|misc/i.test(en) || ja.includes("その他");
+    });
+    if (!hasMisc) {
+      mapped.push({ id: "c11-misc", name: { ko: "기타", en: "Other / Misc", ja: "その他" } });
+    }
+    state.categories = mapped;
   }
   if (boxes?.length) {
     state.boxes = boxes.map((b) => ({
