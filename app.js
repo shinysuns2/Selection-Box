@@ -402,7 +402,7 @@ function recommendGames() {
 function renderRecommend() {
   const items = recommendGames();
   if (!items.length) {
-    el("recommendList").innerHTML = `<article class="card"><div class="meta"><small>${text("noFitRecommend")}</small></div></article>`;
+    el("recommendList").innerHTML = `<article class="card notice"><div class="meta"><small>${text("noFitRecommend")}</small></div></article>`;
     return;
   }
   el("recommendList").innerHTML = items
