@@ -93,7 +93,7 @@ body {
 }
 .box-visual {
   position: relative;
-  border: 1px dashed var(--border);
+  border: 3px solid rgba(71, 85, 105, 0.55);
   border-radius: 14px;
   aspect-ratio: 29 / 14;
   overflow: hidden;
