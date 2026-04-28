@@ -88,7 +88,7 @@ const defaultState = {
       id: "b1",
       name: { ko: "기본 박스", en: "Default Box", ja: "基本ボックス" },
       lengthCm: 29,
-      imageUrl: "https://images.unsplash.com/photo-1555529902-5261145633bf?auto=format&fit=crop&w=1200&q=60",
+      imageUrl: "",
     },
   ],
   categories: [
@@ -149,6 +149,7 @@ function loadState() {
       playersMax: Number(g.playersMax ?? Math.max(2, g.playersMin ?? 2)),
       difficulty: Number(g.difficulty ?? 3),
     }));
+    loaded.boxes = (loaded.boxes || []).map((b) => ({ ...b, imageUrl: b.imageUrl || "" }));
     loaded.selectedPlayers = loaded.selectedPlayers || "all";
     loaded.selectedDifficulty = loaded.selectedDifficulty || "all";
     return loaded;
@@ -189,6 +190,7 @@ function renderStaticText() {
     "playersLabel","difficultyLabel","usedLabel","remainingLabel","fillLabel","recommendTitle",
     "adminLoginTitle","adminPanelTitle","manageBoxTitle","manageGameTitle"
   ].forEach((k) => (el(k).textContent = text(k)));
+  el("selectedTitle").textContent = "Selection Box";
   el("cancelBtn").textContent = text("cancel");
   el("loginBtn").textContent = text("login");
 }
@@ -256,7 +258,10 @@ function renderBox() {
   const remain = box.lengthCm - used;
   const fill = Math.max(0, Math.min(100, (used / box.lengthCm) * 100));
 
-  el("boxImage").src = box.imageUrl;
+  const hasImage = Boolean(box.imageUrl);
+  el("boxImage").style.display = hasImage ? "block" : "none";
+  el("boxPlaceholder").style.display = hasImage ? "none" : "flex";
+  if (hasImage) el("boxImage").src = box.imageUrl;
   el("usedValue").textContent = `${used.toFixed(1)}cm / ${box.lengthCm}cm`;
   el("remainingValue").textContent = `${remain.toFixed(1)}cm`;
   el("fillValue").textContent = `${fill.toFixed(0)}%`;
@@ -471,7 +476,7 @@ function bind() {
       id: `b${n}`,
       name: { ko: el("boxNameKo").value, en: el("boxNameEn").value, ja: el("boxNameJa").value },
       lengthCm: Number(el("boxLength").value),
-      imageUrl: el("boxImageUrl").value,
+      imageUrl: el("boxImageUrl").value.trim(),
     });
     persist();
     e.target.reset();
