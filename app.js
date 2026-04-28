@@ -28,7 +28,7 @@ const i18n = {
     full: "초과됨",
     overflowMsg: "남은 공간이 부족해서 담을 수 없습니다.",
     noFitRecommend: "남은 공간에 들어가는 추천 게임이 없습니다.",
-    noRecommend: "추천게임이 없습니다.",
+    noRecommend: "추천 게임이 없습니다.",
     diff_beginner: "초보자",
     diff_intermediate: "중급자",
     diff_advanced: "고급자",
@@ -441,7 +441,6 @@ function renderGames() {
     const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
     return categoryOk && playersOk && difficultyOk && nameOk;
   });
-  const visible = list.slice(0, gamesRenderCount);
 
   el("gamesList").innerHTML = list
     .map(
