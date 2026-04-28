@@ -154,6 +154,16 @@ dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius
   z-index: 999;
   transition: transform .35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity .35s;
 }
+
+#exportBoxArea.export-static .plug-item,
+#exportBoxArea.export-static .plug-item::after {
+  animation: none !important;
+  transform: none !important;
+}
+#exportBoxArea.export-static #boxPlaceholder {
+  display: none !important;
+}
+
 @media (max-width: 1024px) {
   .layout { grid-template-columns: 1fr; }
   .panel { min-height: auto; }
