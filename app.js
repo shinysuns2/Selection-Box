@@ -668,6 +668,10 @@ function bind() {
         backgroundColor: null,
         scale: Math.min(2, window.devicePixelRatio || 1),
         useCORS: true,
+        onclone: (doc) => {
+          const cloneTarget = doc.getElementById("exportBoxArea");
+          cloneTarget?.classList.add("export-static");
+        },
       });
       const link = document.createElement("a");
       link.download = `selection-box-${new Date().toISOString().slice(0, 10)}.png`;
