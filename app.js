@@ -162,6 +162,16 @@ function persist() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve("");
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function text(key) {
   return i18n[state.lang]?.[key] ?? i18n.ko[key] ?? key;
 }
@@ -469,22 +479,36 @@ function bind() {
     el("adminPassword").value = "";
   });
 
-  el("boxForm").addEventListener("submit", (e) => {
+  el("boxForm").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const file = el("boxImageFile").files?.[0];
+    const fileImage = await fileToDataUrl(file);
+    const urlImage = el("boxImageUrl").value.trim();
+    const imageUrl = fileImage || urlImage;
+
     const n = Date.now().toString(36);
     state.boxes.push({
       id: `b${n}`,
       name: { ko: el("boxNameKo").value, en: el("boxNameEn").value, ja: el("boxNameJa").value },
       lengthCm: Number(el("boxLength").value),
-      imageUrl: el("boxImageUrl").value.trim(),
+      imageUrl,
     });
     persist();
     e.target.reset();
     render();
   });
 
-  el("gameForm").addEventListener("submit", (e) => {
+  el("gameForm").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const file = el("gameImageFile").files?.[0];
+    const fileImage = await fileToDataUrl(file);
+    const urlImage = el("gameImageUrl").value.trim();
+    const imageUrl = fileImage || urlImage;
+    if (!imageUrl) {
+      alert("게임 이미지 파일 업로드 또는 URL 입력이 필요합니다.");
+      return;
+    }
+
     const n = Date.now().toString(36);
     state.games.push({
       id: `g${n}`,
@@ -494,7 +518,7 @@ function bind() {
       playersMin: Number(el("gamePlayersMin").value),
       playersMax: Number(el("gamePlayersMax").value),
       difficulty: Number(el("gameDifficulty").value),
-      imageUrl: el("gameImageUrl").value,
+      imageUrl,
     });
     persist();
     e.target.reset();
