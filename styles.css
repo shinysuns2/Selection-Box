@@ -186,7 +186,16 @@ dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius
 }
 
 @media (max-width: 1024px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "right"
+      "center"
+      "left";
+  }
+  .right { grid-area: right; }
+  .center { grid-area: center; }
+  .left { grid-area: left; }
   .panel { min-height: auto; }
 }
 
