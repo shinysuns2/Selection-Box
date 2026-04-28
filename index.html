@@ -25,7 +25,6 @@
     </header>
 
     <main class="layout">
-      <div id="captureArea" class="capture-area">
       <section class="panel left">
         <div class="row between">
           <h2 id="gamesTitle">게임 목록</h2>
@@ -56,7 +55,7 @@
         <button id="loadMoreGamesBtn" class="btn ghost" hidden>더 보기</button>
       </section>
 
-      <section class="panel center">
+      <section id="exportBoxArea" class="panel center">
         <h2 id="selectedTitle">선택 박스</h2>
         <div id="boxVisual" class="box-visual">
           <img id="boxImage" alt="box" />
@@ -71,7 +70,6 @@
         <div class="progress"><div id="progressBar"></div></div>
         <div id="selectedList" class="chips"></div>
       </section>
-      </div>
 
       <section class="panel right">
         <h2 id="recommendTitle">추천 게임</h2>
