@@ -24,6 +24,7 @@ const i18n = {
     add: "담기",
     full: "초과됨",
     overflowMsg: "남은 공간이 부족해서 담을 수 없습니다.",
+    noFitRecommend: "남은 공간에 들어가는 추천 게임이 없습니다.",
     cancel: "취소",
     login: "로그인",
   },
@@ -49,6 +50,7 @@ const i18n = {
     add: "Add",
     full: "Overflow",
     overflowMsg: "Not enough remaining space to add this game.",
+    noFitRecommend: "No recommended games fit in the remaining space.",
     cancel: "Cancel",
     login: "Login",
   },
@@ -74,6 +76,7 @@ const i18n = {
     add: "追加",
     full: "超過",
     overflowMsg: "残り容量が足りないため追加できません。",
+    noFitRecommend: "残り容量に収まるおすすめゲームがありません。",
     cancel: "キャンセル",
     login: "ログイン",
   },
@@ -305,6 +308,7 @@ function recommendGames() {
 
   return state.games
     .filter((g) => !pickedIds.has(g.id))
+    .filter((g) => remain >= Number(g.lengthCm))
     .map((g) => {
       const fitScore = remain >= g.lengthCm ? 2 + Math.max(0, 1 - (remain - g.lengthCm) / box.lengthCm) : -3;
       const catScore = pickedCats.includes(g.categoryId) ? 1.5 : 0.2;
@@ -320,6 +324,10 @@ function recommendGames() {
 
 function renderRecommend() {
   const items = recommendGames();
+  if (!items.length) {
+    el("recommendList").innerHTML = `<article class="card"><div class="meta"><small>${text("noFitRecommend")}</small></div></article>`;
+    return;
+  }
   el("recommendList").innerHTML = items
     .map(({ game, score }) => `<article class="card">
       <img src="${game.imageUrl}" alt="${nameOf(game)}" />
