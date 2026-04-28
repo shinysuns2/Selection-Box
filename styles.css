@@ -48,6 +48,11 @@ body {
 .panel-actions { margin-bottom: 0; }
 .between { justify-content: space-between; align-items: center; }
 .list { display: grid; gap: 8px; max-height: 58vh; overflow: auto; }
+.recommend-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
 #loadMoreGamesBtn { margin-top: 10px; width: 100%; }
 .card {
   border: 1px solid var(--border);
