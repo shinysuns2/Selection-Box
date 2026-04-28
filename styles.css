@@ -95,7 +95,7 @@ body {
   position: relative;
   border: 1px dashed var(--border);
   border-radius: 14px;
-  min-height: 280px;
+  aspect-ratio: 29 / 14;
   overflow: hidden;
   transition: box-shadow .22s ease, border-color .22s ease;
 }
@@ -105,7 +105,7 @@ body {
 }
 .box-visual img {
   width: 100%;
-  height: 280px;
+  height: 100%;
   object-fit: cover;
   filter: saturate(0.95);
 }
@@ -239,12 +239,6 @@ dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius
     width: 42px;
     height: 59px;
   }
-  .box-visual {
-    min-height: 220px;
-  }
-  .box-visual img {
-    height: 220px;
-  }
   input, select, button {
     font-size: 16px;
   }
@@ -261,12 +255,6 @@ dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius
   .panel {
     padding: 10px;
     border-radius: 10px;
-  }
-  .box-visual {
-    min-height: 170px;
-  }
-  .box-visual img {
-    height: 170px;
   }
   .box-placeholder {
     font-size: 18px;
