@@ -28,6 +28,9 @@ const i18n = {
     full: "초과됨",
     overflowMsg: "남은 공간이 부족해서 담을 수 없습니다.",
     noFitRecommend: "남은 공간에 들어가는 추천 게임이 없습니다.",
+    diff_beginner: "초보자",
+    diff_intermediate: "중급자",
+    diff_advanced: "고급자",
     cancel: "취소",
     login: "로그인",
   },
@@ -54,6 +57,9 @@ const i18n = {
     full: "Overflow",
     overflowMsg: "Not enough remaining space to add this game.",
     noFitRecommend: "No recommended games fit in the remaining space.",
+    diff_beginner: "Gateway",
+    diff_intermediate: "Mid-weight",
+    diff_advanced: "Heavy",
     cancel: "Cancel",
     login: "Login",
   },
@@ -80,6 +86,9 @@ const i18n = {
     full: "超過",
     overflowMsg: "残り容量が足りないため追加できません。",
     noFitRecommend: "残り容量に収まるおすすめゲームがありません。",
+    diff_beginner: "入門",
+    diff_intermediate: "中量級",
+    diff_advanced: "重量級",
     cancel: "キャンセル",
     login: "ログイン",
   },
@@ -101,9 +110,16 @@ const defaultState = {
     },
   ],
   categories: [
-    { id: "c1", name: { ko: "전략", en: "Strategy", ja: "戦略" } },
-    { id: "c2", name: { ko: "파티", en: "Party", ja: "パーティー" } },
-    { id: "c3", name: { ko: "가족", en: "Family", ja: "ファミリー" } },
+    { id: "c1", name: { ko: "트릭테이킹", en: "Trick-taking", ja: "トリックテイキング" } },
+    { id: "c2", name: { ko: "클라이밍", en: "Ladder Climbing", ja: "クライミング" } },
+    { id: "c3", name: { ko: "푸시 유어 럭", en: "Push Your Luck", ja: "プッシュユアラック" } },
+    { id: "c4", name: { ko: "주사위 굴림", en: "Dice Rolling", ja: "ダイスロール" } },
+    { id: "c5", name: { ko: "추리", en: "Deduction", ja: "推理" } },
+    { id: "c6", name: { ko: "경매/입찰", en: "Auction / Bidding", ja: "オークション／入札" } },
+    { id: "c7", name: { ko: "영향력 다수결", en: "Area Majority / Influence", ja: "エリアマジョリティ／影響力" } },
+    { id: "c8", name: { ko: "셋 컬렉션", en: "Set Collection", ja: "セットコレクション" } },
+    { id: "c9", name: { ko: "패턴 인식/매칭", en: "Pattern Recognition / Matching", ja: "パターン認識／マッチング" } },
+    { id: "c10", name: { ko: "타일 배치/그리드 이동", en: "Tile Placement / Grid Movement", ja: "タイル配置／グリッド移動" } },
   ],
   games: [
     {
@@ -207,6 +223,17 @@ function nameOf(item) {
   return item?.name?.[state.lang] || item?.name?.ko || "-";
 }
 
+function difficultyTier(value) {
+  const n = Number(value || 0);
+  if (n <= 2) return "beginner";
+  if (n === 3) return "intermediate";
+  return "advanced";
+}
+
+function difficultyLabel(value) {
+  return text(`diff_${difficultyTier(value)}`);
+}
+
 function raiseIfError(error, fallback) {
   if (!error) return;
   const msg = error.message ? `${fallback}\n${error.message}` : fallback;
@@ -291,6 +318,12 @@ function renderStaticText() {
   el("selectedTitle").textContent = "Selection Box";
   el("cancelBtn").textContent = text("cancel");
   el("loginBtn").textContent = text("login");
+  const diffOpts = el("gameDifficulty")?.options;
+  if (diffOpts?.length >= 3) {
+    diffOpts[0].textContent = text("diff_beginner");
+    diffOpts[1].textContent = text("diff_intermediate");
+    diffOpts[2].textContent = text("diff_advanced");
+  }
 }
 
 function renderSelectors() {
@@ -306,16 +339,22 @@ function renderSelectors() {
     .join("");
   catSel.value = state.selectedCategory;
 
-  const playersSet = [...new Set(state.games.map((g) => `${g.playersMin}-${g.playersMax}`))];
+  const playerMin = Math.min(...state.games.map((g) => Number(g.playersMin || 2)), 2);
+  const playerMax = Math.max(...state.games.map((g) => Number(g.playersMax || 6)), 6);
+  const playerCounts = Array.from({ length: playerMax - playerMin + 1 }, (_, i) => playerMin + i);
   const playersSel = el("playersSelect");
   playersSel.innerHTML = [`<option value="all">${text("allPlayers")}</option>`]
-    .concat(playersSet.map((v) => `<option value="${v}">${v.replace("-", "~")}인</option>`))
+    .concat(playerCounts.map((n) => `<option value="${n}">${n}</option>`))
     .join("");
   playersSel.value = state.selectedPlayers;
 
   const diffSel = el("difficultySelect");
   diffSel.innerHTML = [`<option value="all">${text("allDifficulty")}</option>`]
-    .concat([1, 2, 3, 4, 5].map((d) => `<option value="${d}">${text("difficultyLabel")} ${d}</option>`))
+    .concat([
+      `<option value="beginner">${text("diff_beginner")}</option>`,
+      `<option value="intermediate">${text("diff_intermediate")}</option>`,
+      `<option value="advanced">${text("diff_advanced")}</option>`,
+    ])
     .join("");
   diffSel.value = state.selectedDifficulty;
 
@@ -329,9 +368,11 @@ function renderGames() {
   const list = state.games.filter((g) => {
     const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
     const playersOk =
-      state.selectedPlayers === "all" || `${g.playersMin}-${g.playersMax}` === state.selectedPlayers;
+      state.selectedPlayers === "all" ||
+      (Number(g.playersMin) <= Number(state.selectedPlayers) &&
+        Number(state.selectedPlayers) <= Number(g.playersMax));
     const difficultyOk =
-      state.selectedDifficulty === "all" || Number(state.selectedDifficulty) === Number(g.difficulty);
+      state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
     const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
     return categoryOk && playersOk && difficultyOk && nameOk;
   });
@@ -342,7 +383,7 @@ function renderGames() {
         <img src="${g.imageUrl}" alt="${nameOf(g)}" />
         <div class="meta">
           <div>${nameOf(g)}</div>
-          <small>${g.lengthCm}cm · ${nameOf(state.categories.find((c) => c.id === g.categoryId))} · ${g.playersMin}~${g.playersMax}p · Lv.${g.difficulty}</small>
+          <small>${g.lengthCm}cm · ${nameOf(state.categories.find((c) => c.id === g.categoryId))} · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)}</small>
         </div>
         <button class="btn add-btn" data-id="${g.id}">${text("add")}</button>
       </article>`
@@ -415,7 +456,7 @@ function renderRecommend() {
       <img src="${game.imageUrl}" alt="${nameOf(game)}" />
       <div class="meta">
         <div>${nameOf(game)}</div>
-        <small>${game.lengthCm}cm · ${game.playersMin}~${game.playersMax}p · Lv.${game.difficulty} · score ${score.toFixed(2)}</small>
+        <small>${game.lengthCm}cm · ${game.playersMin}~${game.playersMax}p · ${difficultyLabel(game.difficulty)} · score ${score.toFixed(2)}</small>
       </div>
       <button class="btn add-btn" data-id="${game.id}">${text("add")}</button>
     </article>`)
@@ -433,7 +474,7 @@ function renderAdminLists() {
 
   el("gameAdminList").innerHTML = state.games.map((g) => `
     <article class="card">
-      <div>${nameOf(g)} (${g.lengthCm}cm · ${g.playersMin}~${g.playersMax}p · Lv.${g.difficulty})</div>
+      <div>${nameOf(g)} (${g.lengthCm}cm · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)})</div>
       <button class="btn ghost" data-edit-game="${g.id}">수정</button>
       <button class="btn ghost" data-del-game="${g.id}">삭제</button>
     </article>
@@ -589,7 +630,8 @@ function bind() {
       el("gameBoxImageUrl").value = game.boxImageUrl || "";
       el("gamePlayersMin").value = game.playersMin || 1;
       el("gamePlayersMax").value = game.playersMax || 1;
-      el("gameDifficulty").value = String(game.difficulty || 3);
+      const tier = difficultyTier(game.difficulty);
+      el("gameDifficulty").value = tier === "beginner" ? "1" : tier === "intermediate" ? "2" : "3";
       if (game.categoryId) el("gameCategory").value = game.categoryId;
     }
   });
