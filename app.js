@@ -537,7 +537,7 @@ function recommendGames() {
 function renderRecommend() {
   const box = selectedBox();
   if (!box || selectedGames().length === 0) {
-    el("recommendList").innerHTML = "";
+    el("recommendList").innerHTML = `<p class="recommend-empty">${text("noRecommend")}</p>`;
     return;
   }
   const items = recommendGames();
