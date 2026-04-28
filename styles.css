@@ -161,11 +161,18 @@ body {
   background-position: center;
   background-repeat: no-repeat;
   background-color: transparent;
-  border-right: 1px solid rgba(255, 255, 255, 0.35);
 }
-.plug-item:last-child {
-  border-right: 0;
+.plug-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.25);
+  z-index: 3;
 }
+.plug-item:last-child::before { display: none; }
 .plug-item::after {
   content: "";
   position: absolute;
