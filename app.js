@@ -33,6 +33,7 @@ const i18n = {
     diff_intermediate: "중급자",
     diff_advanced: "고급자",
     resetFilters: "필터 초기화",
+    exportImage: "이미지 생성",
     cancel: "취소",
     login: "로그인",
   },
@@ -63,6 +64,7 @@ const i18n = {
     diff_intermediate: "Mid-weight",
     diff_advanced: "Heavy",
     resetFilters: "Reset filters",
+    exportImage: "Export Image",
     cancel: "Cancel",
     login: "Login",
   },
@@ -93,6 +95,7 @@ const i18n = {
     diff_intermediate: "中量級",
     diff_advanced: "重量級",
     resetFilters: "絞り込み解除",
+    exportImage: "画像を書き出し",
     cancel: "キャンセル",
     login: "ログイン",
   },
@@ -359,6 +362,7 @@ function renderStaticText() {
   el("cancelBtn").textContent = text("cancel");
   el("loginBtn").textContent = text("login");
   el("resetFiltersBtn").textContent = text("resetFilters");
+  el("exportImageBtn").textContent = text("exportImage");
   const diffOpts = el("gameDifficulty")?.options;
   if (diffOpts?.length >= 3) {
     diffOpts[0].textContent = text("diff_beginner");
@@ -647,6 +651,32 @@ function bind() {
     gamesRenderCount = GAMES_PAGE_SIZE;
     persist();
     render();
+  });
+
+  el("exportImageBtn").addEventListener("click", async () => {
+    const target = el("captureArea");
+    if (!target || !window.html2canvas) {
+      alert("이미지 캡처 기능을 불러오지 못했습니다.");
+      return;
+    }
+    const btn = el("exportImageBtn");
+    const prev = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = state.lang === "ko" ? "생성중..." : "Exporting...";
+    try {
+      const canvas = await window.html2canvas(target, {
+        backgroundColor: null,
+        scale: Math.min(2, window.devicePixelRatio || 1),
+        useCORS: true,
+      });
+      const link = document.createElement("a");
+      link.download = `selection-box-${new Date().toISOString().slice(0, 10)}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = prev;
+    }
   });
 
   document.body.addEventListener("click", async (e) => {
