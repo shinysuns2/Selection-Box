@@ -58,6 +58,8 @@ body {
 }
 .card img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
 .meta small { color: var(--muted); }
+.card.notice { grid-template-columns: 1fr; }
+.card.notice .meta small { white-space: normal; word-break: keep-all; }
 .btn {
   border: 1px solid var(--accent);
   background: var(--accent);
