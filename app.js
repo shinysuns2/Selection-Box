@@ -537,17 +537,21 @@ function recommendGames() {
 }
 
 function renderRecommend() {
+  const box = selectedBox();
+  if (!box || selectedGames().length === 0) {
+    el("recommendList").innerHTML = "";
+    return;
+  }
   const items = recommendGames();
   if (!items.length) {
-    el("recommendList").innerHTML = `<article class="card notice"><div class="meta"><small>${text("noFitRecommend")}</small></div></article>`;
+    el("recommendList").innerHTML = "";
     return;
   }
   el("recommendList").innerHTML = items
-    .map(({ game, fitGap, totalScore, difficultyScore, mechanismScore, playerScore }, idx) => `<article class="card">
+    .map(({ game }) => `<article class="card">
       <img src="${game.imageUrl}" alt="${nameOf(game)}" loading="lazy" decoding="async" />
       <div class="meta">
-        <div>${idx + 1}순위 · ${nameOf(game)} (${totalScore}점)</div>
-        <small>${game.lengthCm}cm · ${game.playersMin}~${game.playersMax}p · ${difficultyLabel(game.difficulty)} · 난이도 ${difficultyScore} · 메커니즘 ${mechanismScore} · 인원 ${playerScore} · gap ${fitGap.toFixed(1)}cm</small>
+        <div>${nameOf(game)}</div>
       </div>
       <button class="btn add-btn" data-id="${game.id}">${text("add")}</button>
     </article>`)
@@ -579,25 +583,15 @@ function animateToBox(imgSrc, fromEl) {
   document.body.appendChild(fly);
 
   const from = fromEl.getBoundingClientRect();
-  const to = el("dropZone").getBoundingClientRect();
-  const boxVisual = el("boxVisual");
+  const to = el("boxVisual").getBoundingClientRect();
 
   fly.style.left = `${from.left}px`;
   fly.style.top = `${from.top}px`;
-  fly.style.width = `${from.width || 52}px`;
-  fly.style.height = `${from.height || 52}px`;
-  fly.style.opacity = "0.95";
-  fly.style.filter = "saturate(1.05)";
   requestAnimationFrame(() => {
-    const dx = to.left - from.left + 8;
-    const dy = to.top - from.top + 8;
-    fly.style.transform = `translate(${dx}px, ${dy}px) scale(0.9)`;
-    fly.style.opacity = "0.12";
-    fly.style.filter = "saturate(0.9) blur(0.3px)";
+    fly.style.transform = `translate(${to.left - from.left + 10}px, ${to.top - from.top + 10}px) scale(0.35)`;
+    fly.style.opacity = "0.2";
   });
-  setTimeout(() => boxVisual.classList.add("box-hit"), 235);
-  setTimeout(() => boxVisual.classList.remove("box-hit"), 470);
-  setTimeout(() => fly.remove(), 360);
+  setTimeout(() => fly.remove(), 380);
 }
 
 function addGame(id, sourceEl) {
