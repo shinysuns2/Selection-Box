@@ -201,12 +201,25 @@ function nameOf(item) {
   return item?.name?.[state.lang] || item?.name?.ko || "-";
 }
 
+function raiseIfError(error, fallback) {
+  if (!error) return;
+  const msg = error.message ? `${fallback}\n${error.message}` : fallback;
+  alert(msg);
+  throw error;
+}
+
 async function fetchSharedData() {
-  const [{ data: categories }, { data: boxes }, { data: games }] = await Promise.all([
+  const [catRes, boxRes, gameRes] = await Promise.all([
     supabaseClient.from("categories").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
     supabaseClient.from("boxes").select("*").eq("is_active", true).order("created_at", { ascending: true }),
     supabaseClient.from("games").select("*").eq("is_active", true).order("created_at", { ascending: true }),
   ]);
+  raiseIfError(catRes.error, "카테고리 로딩 실패");
+  raiseIfError(boxRes.error, "박스 로딩 실패");
+  raiseIfError(gameRes.error, "게임 로딩 실패");
+  const { data: categories } = catRes;
+  const { data: boxes } = boxRes;
+  const { data: games } = gameRes;
 
   if (categories?.length) {
     state.categories = categories.map((c) => ({
@@ -516,7 +529,8 @@ function bind() {
 
     const delBox = e.target.closest("[data-del-box]");
     if (delBox) {
-      await supabaseClient.from("boxes").delete().eq("id", delBox.dataset.delBox);
+      const { error } = await supabaseClient.from("boxes").delete().eq("id", delBox.dataset.delBox);
+      raiseIfError(error, "박스 삭제 실패");
       await fetchSharedData();
       state.selectedBoxId = state.boxes[0]?.id || defaultState.selectedBoxId;
       persist();
@@ -526,7 +540,8 @@ function bind() {
 
     const delGame = e.target.closest("[data-del-game]");
     if (delGame) {
-      await supabaseClient.from("games").delete().eq("id", delGame.dataset.delGame);
+      const { error } = await supabaseClient.from("games").delete().eq("id", delGame.dataset.delGame);
+      raiseIfError(error, "게임 삭제 실패");
       await fetchSharedData();
       persist();
       render();
@@ -547,7 +562,7 @@ function bind() {
       el("adminPanel").hidden = false;
       el("adminLoginForm").hidden = true;
     } else {
-      alert("로그인 실패: 어드민 비밀번호를 확인해주세요.");
+      alert(`로그인 실패: ${error.message || "어드민 비밀번호를 확인해주세요."}`);
     }
   });
 
@@ -565,7 +580,7 @@ function bind() {
     const urlImage = el("boxImageUrl").value.trim();
     const imageUrl = fileImage || urlImage;
 
-    await supabaseClient.from("boxes").insert({
+    const { error } = await supabaseClient.from("boxes").insert({
       name_ko: el("boxNameKo").value,
       name_en: el("boxNameEn").value,
       name_ja: el("boxNameJa").value,
@@ -573,6 +588,7 @@ function bind() {
       image_url: imageUrl || null,
       is_active: true,
     });
+    raiseIfError(error, "박스 추가 실패");
     await fetchSharedData();
     persist();
     e.target.reset();
@@ -590,7 +606,7 @@ function bind() {
       return;
     }
 
-    await supabaseClient.from("games").insert({
+    const { error } = await supabaseClient.from("games").insert({
       name_ko: el("gameNameKo").value,
       name_en: el("gameNameEn").value,
       name_ja: el("gameNameJa").value,
@@ -602,6 +618,7 @@ function bind() {
       image_url: imageUrl,
       is_active: true,
     });
+    raiseIfError(error, "게임 추가 실패");
     await fetchSharedData();
     persist();
     e.target.reset();
