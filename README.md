@@ -4,6 +4,7 @@ A lightweight web app prototype for planning game selections in 1D boxes (cm-bas
 
 - Box size and image management
 - Game size/category/image management
+- Separate game list image and in-box image support
 - Admin image input supports both URL and local file upload (stored as Data URL)
 - Category filter and search
 - Players filter and difficulty filter
