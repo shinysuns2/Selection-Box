@@ -208,6 +208,12 @@ function raiseIfError(error, fallback) {
   throw error;
 }
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || "")
+  );
+}
+
 async function fetchSharedData() {
   const [catRes, boxRes, gameRes] = await Promise.all([
     supabaseClient.from("categories").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
@@ -606,12 +612,18 @@ function bind() {
       return;
     }
 
+    const rawCategoryId = el("gameCategory").value;
+    const categoryId = isUuid(rawCategoryId) ? rawCategoryId : null;
+    if (!categoryId) {
+      alert("카테고리 UUID가 없어 기본 카테고리 없이 저장됩니다. (Supabase categories 테이블을 먼저 채워주세요)");
+    }
+
     const { error } = await supabaseClient.from("games").insert({
       name_ko: el("gameNameKo").value,
       name_en: el("gameNameEn").value,
       name_ja: el("gameNameJa").value,
       length_cm: Number(el("gameLength").value),
-      category_id: el("gameCategory").value,
+      category_id: categoryId,
       players_min: Number(el("gamePlayersMin").value),
       players_max: Number(el("gamePlayersMax").value),
       difficulty: Number(el("gameDifficulty").value),
