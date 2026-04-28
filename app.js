@@ -654,7 +654,7 @@ function bind() {
   });
 
   el("exportImageBtn").addEventListener("click", async () => {
-    const target = el("captureArea");
+    const target = el("exportBoxArea");
     if (!target || !window.html2canvas) {
       alert("이미지 캡처 기능을 불러오지 못했습니다.");
       return;
