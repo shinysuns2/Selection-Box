@@ -1,1 +1,144 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Selection Box Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 id="appTitle">Selection Box Planner</h1>
+      <div class="top-controls">
+        <label>
+          <span id="langLabel">Language</span>
+          <select id="languageSelect">
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </label>
+        <button id="themeToggle" class="btn ghost">🌙</button>
+        <button id="exportImageBtn" class="btn ghost">이미지 생성</button>
+        <button id="adminBtn" class="btn">Admin</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel left">
+        <div class="row between">
+          <h2 id="gamesTitle">게임 목록</h2>
+          <div class="row">
+            <input id="searchInput" type="search" placeholder="검색" />
+            <button id="resetFiltersBtn" class="btn ghost">초기화</button>
+          </div>
+        </div>
+        <div class="row">
+          <label>
+            <span id="boxLabel">박스</span>
+            <select id="boxSelect"></select>
+          </label>
+          <label>
+            <span id="categoryLabel">카테고리</span>
+            <select id="categorySelect"></select>
+          </label>
+          <label>
+            <span id="playersLabel">인원수</span>
+            <select id="playersSelect"></select>
+          </label>
+          <label>
+            <span id="difficultyLabel">난이도</span>
+            <select id="difficultySelect"></select>
+          </label>
+        </div>
+        <div id="gamesList" class="list"></div>
+        <button id="loadMoreGamesBtn" class="btn ghost" hidden>더 보기</button>
+      </section>
+
+      <section id="exportBoxArea" class="panel center">
+        <div class="row between">
+          <h2 id="selectedTitle">선택 박스</h2>
+          <button id="resetSelectionBtn" class="btn ghost">박스 초기화</button>
+        </div>
+        <div id="boxVisual" class="box-visual">
+          <img id="boxImage" alt="box" />
+          <div id="boxPlaceholder" class="box-placeholder">Selection Box</div>
+          <div id="dropZone" class="drop-zone"></div>
+        </div>
+        <div class="stats">
+          <div><span id="usedLabel">사용</span>: <strong id="usedValue">0</strong></div>
+          <div><span id="remainingLabel">남음</span>: <strong id="remainingValue">0</strong></div>
+          <div><span id="fillLabel">채움률</span>: <strong id="fillValue">0%</strong></div>
+        </div>
+        <div class="progress"><div id="progressBar"></div></div>
+        <div id="selectedList" class="chips"></div>
+      </section>
+
+      <section class="panel right">
+        <h2 id="recommendTitle">추천 게임</h2>
+        <div id="recommendList" class="list"></div>
+      </section>
+    </main>
+
+    <dialog id="adminDialog">
+      <form method="dialog" id="adminLoginForm">
+        <h3 id="adminLoginTitle">관리자 로그인</h3>
+        <input id="adminPassword" type="password" placeholder="password" required />
+        <menu>
+          <button value="cancel" class="btn ghost" id="cancelBtn">취소</button>
+          <button value="default" class="btn" id="loginBtn">로그인</button>
+        </menu>
+      </form>
+
+      <div id="adminPanel" hidden>
+        <div class="row between">
+          <h3 id="adminPanelTitle">관리자 패널</h3>
+          <button id="logoutBtn" class="btn ghost">Logout</button>
+        </div>
+
+        <section>
+          <h4 id="manageBoxTitle">박스 관리</h4>
+          <form id="boxForm" class="grid-2">
+            <input id="boxNameKo" placeholder="이름(ko)" required />
+            <input id="boxNameEn" placeholder="Name(en)" required />
+            <input id="boxNameJa" placeholder="名前(ja)" required />
+            <input id="boxLength" type="number" min="1" step="0.1" placeholder="length cm" required />
+            <input id="boxImageUrl" placeholder="image url (optional)" />
+            <input id="boxImageFile" type="file" accept="image/*" />
+            <button class="btn" id="saveBoxBtn">저장</button>
+          </form>
+          <div id="boxAdminList" class="list compact"></div>
+        </section>
+
+        <section>
+          <h4 id="manageGameTitle">게임 관리</h4>
+          <form id="gameForm" class="grid-2">
+            <input id="gameNameKo" placeholder="게임명(ko)" required />
+            <input id="gameNameEn" placeholder="Game(en)" required />
+            <input id="gameNameJa" placeholder="ゲーム(ja)" required />
+            <input id="gameLength" type="number" min="0.1" step="0.1" placeholder="length cm" required />
+            <input id="gameImageUrl" placeholder="list image url (optional)" />
+            <input id="gameImageFile" type="file" accept="image/*" />
+            <input id="gameBoxImageUrl" placeholder="box image url (optional)" />
+            <input id="gameBoxImageFile" type="file" accept="image/*" />
+            <input id="gamePlayersMin" type="number" min="1" step="1" placeholder="min players" required />
+            <input id="gamePlayersMax" type="number" min="1" step="1" placeholder="max players" required />
+            <select id="gameDifficulty">
+              <option value="1">초보자</option>
+              <option value="2" selected>중급자</option>
+              <option value="3">고급자</option>
+            </select>
+            <select id="gameCategory"></select>
+            <button class="btn" id="saveGameBtn">저장</button>
+          </form>
+          <div id="gameAdminList" class="list compact"></div>
+        </section>
+      </div>
+    </dialog>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
 
