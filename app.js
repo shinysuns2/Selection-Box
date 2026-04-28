@@ -120,6 +120,7 @@ const defaultState = {
     { id: "c8", name: { ko: "셋 컬렉션", en: "Set Collection", ja: "セットコレクション" } },
     { id: "c9", name: { ko: "패턴 인식/매칭", en: "Pattern Recognition / Matching", ja: "パターン認識／マッチング" } },
     { id: "c10", name: { ko: "타일 배치/그리드 이동", en: "Tile Placement / Grid Movement", ja: "タイル配置／グリッド移動" } },
+    { id: "c11", name: { ko: "기타", en: "Other / Misc", ja: "その他" } },
   ],
   games: [
     {
