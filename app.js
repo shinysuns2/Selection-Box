@@ -34,6 +34,7 @@ const i18n = {
     diff_advanced: "고급자",
     resetFilters: "필터 초기화",
     exportImage: "이미지 생성",
+    resetSelection: "박스 초기화",
     cancel: "취소",
     login: "로그인",
   },
@@ -65,6 +66,7 @@ const i18n = {
     diff_advanced: "Heavy",
     resetFilters: "Reset filters",
     exportImage: "Export Image",
+    resetSelection: "Clear Box",
     cancel: "Cancel",
     login: "Login",
   },
@@ -96,6 +98,7 @@ const i18n = {
     diff_advanced: "重量級",
     resetFilters: "絞り込み解除",
     exportImage: "画像を書き出し",
+    resetSelection: "ボックス初期化",
     cancel: "キャンセル",
     login: "ログイン",
   },
@@ -371,6 +374,7 @@ function renderStaticText() {
   el("loginBtn").textContent = text("login");
   el("resetFiltersBtn").textContent = text("resetFilters");
   el("exportImageBtn").textContent = text("exportImage");
+  el("resetSelectionBtn").textContent = text("resetSelection");
   const diffOpts = el("gameDifficulty")?.options;
   if (diffOpts?.length >= 3) {
     diffOpts[0].textContent = text("diff_beginner");
@@ -657,6 +661,12 @@ function bind() {
     state.selectedPlayers = "all";
     state.selectedDifficulty = "all";
     gamesRenderCount = GAMES_PAGE_SIZE;
+    persist();
+    render();
+  });
+
+  el("resetSelectionBtn").addEventListener("click", () => {
+    state.selectedGameIds = [];
     persist();
     render();
   });
