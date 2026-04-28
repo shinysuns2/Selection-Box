@@ -285,11 +285,11 @@ function renderBox() {
   const filledHtml = selectedGames()
     .map((g) => {
       const widthPct = (Number(g.lengthCm) / box.lengthCm) * 100;
-      return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}% ; background-image:url('${g.imageUrl}')"></figure>`;
+      return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${g.imageUrl}')"></figure>`;
     })
     .join("");
   const emptyPct = Math.max(0, (remain / box.lengthCm) * 100);
-  const emptyHtml = emptyPct > 0.3 ? `<div class="empty-slot" style="width:${emptyPct}%"></div>` : "";
+  const emptyHtml = emptyPct > 0.01 ? `<div class="empty-slot" style="width:${emptyPct}%; flex:0 0 ${emptyPct}%"></div>` : "";
   el("dropZone").innerHTML = `${filledHtml}${emptyHtml}`;
 }
 
