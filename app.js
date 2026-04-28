@@ -339,12 +339,16 @@ function renderSelectors() {
     .join("");
   catSel.value = state.selectedCategory;
 
-  const playerMin = Math.min(...state.games.map((g) => Number(g.playersMin || 2)), 2);
-  const playerMax = Math.max(...state.games.map((g) => Number(g.playersMax || 6)), 6);
-  const playerCounts = Array.from({ length: playerMax - playerMin + 1 }, (_, i) => playerMin + i);
   const playersSel = el("playersSelect");
   playersSel.innerHTML = [`<option value="all">${text("allPlayers")}</option>`]
-    .concat(playerCounts.map((n) => `<option value="${n}">${n}</option>`))
+    .concat([
+      `<option value="1">1</option>`,
+      `<option value="2">2</option>`,
+      `<option value="3">3</option>`,
+      `<option value="4">4</option>`,
+      `<option value="5">5</option>`,
+      `<option value="6plus">6+</option>`,
+    ])
     .join("");
   playersSel.value = state.selectedPlayers;
 
@@ -369,8 +373,10 @@ function renderGames() {
     const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
     const playersOk =
       state.selectedPlayers === "all" ||
-      (Number(g.playersMin) <= Number(state.selectedPlayers) &&
-        Number(state.selectedPlayers) <= Number(g.playersMax));
+      (state.selectedPlayers === "6plus"
+        ? Number(g.playersMax) >= 6
+        : Number(g.playersMin) <= Number(state.selectedPlayers) &&
+          Number(state.selectedPlayers) <= Number(g.playersMax));
     const difficultyOk =
       state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
     const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
