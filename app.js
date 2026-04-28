@@ -497,41 +497,41 @@ function recommendGames() {
   const picked = selectedGames();
   const pickedIds = new Set(picked.map((g) => g.id));
   const remain = box.lengthCm - calcUsed();
-  const pickedCats = picked.map((g) => g.categoryId).filter(Boolean);
+  const pickedCats = new Set(picked.map((g) => g.categoryId).filter(Boolean));
   const pickedDifficultyTiers = new Set(picked.map((g) => difficultyTier(g.difficulty)));
+  const pickedPlayerCenters = picked.map((g) => Math.round((Number(g.playersMin) + Number(g.playersMax)) / 2));
 
   return state.games
     .filter((g) => !pickedIds.has(g.id))
     .filter((g) => remain >= Number(g.lengthCm))
     .map((g) => {
       const remainAfter = remain - Number(g.lengthCm);
-      const fitGap = Math.max(0, remainAfter); // 1순위: 남는 공간이 적을수록 우선
+      const fitGap = Math.max(0, remainAfter); // 두께 조건 통과 후 tie-break
 
-      const difficultyMatch =
-        pickedDifficultyTiers.size === 0 || pickedDifficultyTiers.has(difficultyTier(g.difficulty));
-      const difficultyPriority = difficultyMatch ? 1 : 0; // 2순위
+      const hasPicked = picked.length > 0;
+      const difficultyScore = !hasPicked ? 0 : pickedDifficultyTiers.has(difficultyTier(g.difficulty)) ? 50 : 25;
+      const mechanismScore = !hasPicked ? 0 : pickedCats.has(g.categoryId) ? 50 : 0;
 
-      const mechanismMatchCount = pickedCats.filter((cat) => cat === g.categoryId).length;
-      const mechanismScore = mechanismMatchCount / Math.max(1, pickedCats.length); // 3순위
+      const candidateCenter = Math.round((Number(g.playersMin) + Number(g.playersMax)) / 2);
+      const playerDiff = !hasPicked
+        ? Infinity
+        : Math.min(...pickedPlayerCenters.map((v) => Math.abs(v - candidateCenter)));
+      const playerScore = !hasPicked ? 0 : playerDiff === 0 ? 50 : playerDiff === 1 ? 25 : 0;
 
-      const compatScore = picked.reduce((s, p) => {
-        const hit = state.compat.find((c) => c.from === p.id && c.to === g.id);
-        return s + (hit?.score || 0);
-      }, 0);
+      const totalScore = difficultyScore + mechanismScore + playerScore;
 
       return {
         game: g,
+        totalScore,
         fitGap,
-        difficultyPriority,
+        difficultyScore,
         mechanismScore,
-        compatScore,
+        playerScore,
       };
     })
     .sort((a, b) =>
-      a.fitGap - b.fitGap ||
-      b.difficultyPriority - a.difficultyPriority ||
-      b.mechanismScore - a.mechanismScore ||
-      b.compatScore - a.compatScore
+      b.totalScore - a.totalScore ||
+      a.fitGap - b.fitGap
     )
     .slice(0, 5);
 }
@@ -543,11 +543,11 @@ function renderRecommend() {
     return;
   }
   el("recommendList").innerHTML = items
-    .map(({ game, fitGap, difficultyPriority, mechanismScore }) => `<article class="card">
+    .map(({ game, fitGap, totalScore, difficultyScore, mechanismScore, playerScore }, idx) => `<article class="card">
       <img src="${game.imageUrl}" alt="${nameOf(game)}" loading="lazy" decoding="async" />
       <div class="meta">
-        <div>${nameOf(game)}</div>
-        <small>${game.lengthCm}cm · ${game.playersMin}~${game.playersMax}p · ${difficultyLabel(game.difficulty)} · gap ${fitGap.toFixed(1)}cm · mech ${(mechanismScore * 100).toFixed(0)}%${difficultyPriority ? " · diff✓" : ""}</small>
+        <div>${idx + 1}순위 · ${nameOf(game)} (${totalScore}점)</div>
+        <small>${game.lengthCm}cm · ${game.playersMin}~${game.playersMax}p · ${difficultyLabel(game.difficulty)} · 난이도 ${difficultyScore} · 메커니즘 ${mechanismScore} · 인원 ${playerScore} · gap ${fitGap.toFixed(1)}cm</small>
       </div>
       <button class="btn add-btn" data-id="${game.id}">${text("add")}</button>
     </article>`)
