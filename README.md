@@ -10,7 +10,7 @@ A lightweight web app prototype for planning game selections in 1D boxes (cm-bas
 - Fill/remaining indicators based on selected box length
 - Recommendation engine (fit + category/compatibility score)
 - In-box cover image stacking with plug-in animation on add
-- Admin login modal (prototype password: `boxadmin`)
+- Admin login modal (Supabase auth-backed)
 - Multilingual UI: Korean, English, Japanese
 - Comfortable light/dark theme toggle
 
@@ -21,4 +21,5 @@ This is a static app. Open `index.html` in any browser.
 ## Notes
 
 - Data is persisted in browser `localStorage`.
-- This is a front-end prototype for requirement validation; production should move admin/auth/data to a backend (e.g., Supabase).
+- Shared catalog data (`boxes`, `games`, `categories`) is read/written via Supabase.
+- Local browser storage now keeps only personal UI state and selected-in-box items.
