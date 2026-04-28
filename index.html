@@ -96,6 +96,7 @@
             <input id="boxNameJa" placeholder="名前(ja)" required />
             <input id="boxLength" type="number" min="1" step="0.1" placeholder="length cm" required />
             <input id="boxImageUrl" placeholder="image url (optional)" />
+            <input id="boxImageFile" type="file" accept="image/*" />
             <button class="btn" id="saveBoxBtn">저장</button>
           </form>
           <div id="boxAdminList" class="list compact"></div>
@@ -108,7 +109,8 @@
             <input id="gameNameEn" placeholder="Game(en)" required />
             <input id="gameNameJa" placeholder="ゲーム(ja)" required />
             <input id="gameLength" type="number" min="0.1" step="0.1" placeholder="length cm" required />
-            <input id="gameImageUrl" placeholder="image url" required />
+            <input id="gameImageUrl" placeholder="image url (optional)" />
+            <input id="gameImageFile" type="file" accept="image/*" />
             <input id="gamePlayersMin" type="number" min="1" step="1" placeholder="min players" required />
             <input id="gamePlayersMax" type="number" min="1" step="1" placeholder="max players" required />
             <select id="gameDifficulty">
