@@ -497,21 +497,42 @@ function recommendGames() {
   const picked = selectedGames();
   const pickedIds = new Set(picked.map((g) => g.id));
   const remain = box.lengthCm - calcUsed();
-  const pickedCats = picked.map((g) => g.categoryId);
+  const pickedCats = picked.map((g) => g.categoryId).filter(Boolean);
+  const pickedDifficultyTiers = new Set(picked.map((g) => difficultyTier(g.difficulty)));
 
   return state.games
     .filter((g) => !pickedIds.has(g.id))
     .filter((g) => remain >= Number(g.lengthCm))
     .map((g) => {
-      const fitScore = remain >= g.lengthCm ? 2 + Math.max(0, 1 - (remain - g.lengthCm) / box.lengthCm) : -3;
-      const catScore = pickedCats.includes(g.categoryId) ? 1.5 : 0.2;
-      const compScore = picked.reduce((s, p) => {
+      const remainAfter = remain - Number(g.lengthCm);
+      const fitGap = Math.max(0, remainAfter); // 1순위: 남는 공간이 적을수록 우선
+
+      const difficultyMatch =
+        pickedDifficultyTiers.size === 0 || pickedDifficultyTiers.has(difficultyTier(g.difficulty));
+      const difficultyPriority = difficultyMatch ? 1 : 0; // 2순위
+
+      const mechanismMatchCount = pickedCats.filter((cat) => cat === g.categoryId).length;
+      const mechanismScore = mechanismMatchCount / Math.max(1, pickedCats.length); // 3순위
+
+      const compatScore = picked.reduce((s, p) => {
         const hit = state.compat.find((c) => c.from === p.id && c.to === g.id);
         return s + (hit?.score || 0);
       }, 0);
-      return { game: g, score: fitScore + catScore + compScore };
+
+      return {
+        game: g,
+        fitGap,
+        difficultyPriority,
+        mechanismScore,
+        compatScore,
+      };
     })
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) =>
+      a.fitGap - b.fitGap ||
+      b.difficultyPriority - a.difficultyPriority ||
+      b.mechanismScore - a.mechanismScore ||
+      b.compatScore - a.compatScore
+    )
     .slice(0, 5);
 }
 
@@ -522,11 +543,11 @@ function renderRecommend() {
     return;
   }
   el("recommendList").innerHTML = items
-    .map(({ game, score }) => `<article class="card">
+    .map(({ game, fitGap, difficultyPriority, mechanismScore }) => `<article class="card">
       <img src="${game.imageUrl}" alt="${nameOf(game)}" loading="lazy" decoding="async" />
       <div class="meta">
         <div>${nameOf(game)}</div>
-        <small>${game.lengthCm}cm · ${game.playersMin}~${game.playersMax}p · ${difficultyLabel(game.difficulty)} · score ${score.toFixed(2)}</small>
+        <small>${game.lengthCm}cm · ${game.playersMin}~${game.playersMax}p · ${difficultyLabel(game.difficulty)} · gap ${fitGap.toFixed(1)}cm · mech ${(mechanismScore * 100).toFixed(0)}%${difficultyPriority ? " · diff✓" : ""}</small>
       </div>
       <button class="btn add-btn" data-id="${game.id}">${text("add")}</button>
     </article>`)
