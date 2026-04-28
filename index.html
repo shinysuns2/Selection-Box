@@ -19,11 +19,13 @@
           </select>
         </label>
         <button id="themeToggle" class="btn ghost">🌙</button>
+        <button id="exportImageBtn" class="btn ghost">이미지 생성</button>
         <button id="adminBtn" class="btn">Admin</button>
       </div>
     </header>
 
     <main class="layout">
+      <div id="captureArea" class="capture-area">
       <section class="panel left">
         <div class="row between">
           <h2 id="gamesTitle">게임 목록</h2>
@@ -69,6 +71,7 @@
         <div class="progress"><div id="progressBar"></div></div>
         <div id="selectedList" class="chips"></div>
       </section>
+      </div>
 
       <section class="panel right">
         <h2 id="recommendTitle">추천 게임</h2>
@@ -133,6 +136,7 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
