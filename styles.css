@@ -1,143 +1,238 @@
-<!doctype html>
-<html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Selection Box Planner</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header class="topbar">
-      <h1 id="appTitle">Selection Box Planner</h1>
-      <div class="top-controls">
-        <label>
-          <span id="langLabel">Language</span>
-          <select id="languageSelect">
-            <option value="ko">한국어</option>
-            <option value="en">English</option>
-            <option value="ja">日本語</option>
-          </select>
-        </label>
-        <button id="themeToggle" class="btn ghost">🌙</button>
-        <button id="exportImageBtn" class="btn ghost">이미지 생성</button>
-        <button id="adminBtn" class="btn">Admin</button>
-      </div>
-    </header>
+:root {
+  --bg: #f7f7f8;
+  --panel: #ffffff;
+  --text: #1f2430;
+  --muted: #697386;
+  --accent: #5a67d8;
+  --border: #e5e7eb;
+}
 
-    <main class="layout">
-      <section class="panel left">
-        <div class="row between">
-          <h2 id="gamesTitle">게임 목록</h2>
-          <div class="row">
-            <input id="searchInput" type="search" placeholder="검색" />
-            <button id="resetFiltersBtn" class="btn ghost">초기화</button>
-          </div>
-        </div>
-        <div class="row">
-          <label>
-            <span id="boxLabel">박스</span>
-            <select id="boxSelect"></select>
-          </label>
-          <label>
-            <span id="categoryLabel">카테고리</span>
-            <select id="categorySelect"></select>
-          </label>
-          <label>
-            <span id="playersLabel">인원수</span>
-            <select id="playersSelect"></select>
-          </label>
-          <label>
-            <span id="difficultyLabel">난이도</span>
-            <select id="difficultySelect"></select>
-          </label>
-        </div>
-        <div id="gamesList" class="list"></div>
-        <button id="loadMoreGamesBtn" class="btn ghost" hidden>더 보기</button>
-      </section>
+:root.dark {
+  --bg: #12161d;
+  --panel: #1b212c;
+  --text: #e6e8ee;
+  --muted: #a0a7b6;
+  --accent: #8da2ff;
+  --border: #2c3442;
+}
 
-      <section id="exportBoxArea" class="panel center">
-        <div class="row between">
-          <h2 id="selectedTitle">선택 박스</h2>
-          <button id="resetSelectionBtn" class="btn ghost">박스 초기화</button>
-        </div>
-        <div id="boxVisual" class="box-visual">
-          <img id="boxImage" alt="box" />
-          <div id="boxPlaceholder" class="box-placeholder">Selection Box</div>
-          <div id="dropZone" class="drop-zone"></div>
-        </div>
-        <div class="stats">
-          <div><span id="usedLabel">사용</span>: <strong id="usedValue">0</strong></div>
-          <div><span id="remainingLabel">남음</span>: <strong id="remainingValue">0</strong></div>
-          <div><span id="fillLabel">채움률</span>: <strong id="fillValue">0%</strong></div>
-        </div>
-        <div class="progress"><div id="progressBar"></div></div>
-        <div id="selectedList" class="chips"></div>
-      </section>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.top-controls { display: flex; gap: 10px; align-items: center; }
+.layout {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  min-height: 72vh;
+}
+.row { display: flex; gap: 10px; margin-bottom: 10px; }
+.between { justify-content: space-between; align-items: center; }
+.list { display: grid; gap: 8px; max-height: 58vh; overflow: auto; }
+#loadMoreGamesBtn { margin-top: 10px; width: 100%; }
+.card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.card img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+.meta small { color: var(--muted); }
+.card.notice { grid-template-columns: 1fr; }
+.card.notice .meta small { white-space: normal; word-break: keep-all; }
+.btn {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-height: 40px;
+  cursor: pointer;
+}
+.btn.ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+.box-visual {
+  position: relative;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  min-height: 280px;
+  overflow: hidden;
+}
+.box-visual img {
+  width: 100%;
+  height: 280px;
+  object-fit: cover;
+  filter: saturate(0.95);
+}
+.box-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(135deg, #6ea3cc, #8db3cf);
+}
+.drop-zone {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
+  overflow: hidden;
+}
+.plug-item {
+  position: relative;
+  margin: 0;
+  height: 100%;
+  border-radius: 0;
+  overflow: hidden;
+  transform-origin: left center;
+  animation: plugIn 340ms cubic-bezier(.2,.8,.2,1);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.plug-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,.12), rgba(0,0,0,.12));
+}
+.empty-slot {
+  height: 100%;
+  border-radius: 0;
+  background: rgba(107, 114, 128, 0.45);
+}
+@keyframes plugIn {
+  from { transform: scaleX(0.2); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+.progress { background: var(--border); height: 10px; border-radius: 999px; overflow: hidden; }
+#progressBar { background: linear-gradient(90deg, #5a67d8, #6aa6ff); width: 0%; height: 100%; transition: width .3s ease; }
+.stats { display: flex; justify-content: space-between; margin: 10px 0; font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; font-size: 12px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); }
+.compact .card { grid-template-columns: 1fr auto auto; }
+.fly {
+  position: fixed;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 999;
+  transition: transform .35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity .35s;
+}
 
-      <section class="panel right">
-        <h2 id="recommendTitle">추천 게임</h2>
-        <div id="recommendList" class="list"></div>
-      </section>
-    </main>
+#exportBoxArea.export-static .plug-item,
+#exportBoxArea.export-static .plug-item::after {
+  animation: none !important;
+  transform: none !important;
+}
+#exportBoxArea.export-static #boxPlaceholder {
+  display: none !important;
+}
 
-    <dialog id="adminDialog">
-      <form method="dialog" id="adminLoginForm">
-        <h3 id="adminLoginTitle">관리자 로그인</h3>
-        <input id="adminPassword" type="password" placeholder="password" required />
-        <menu>
-          <button value="cancel" class="btn ghost" id="cancelBtn">취소</button>
-          <button value="default" class="btn" id="loginBtn">로그인</button>
-        </menu>
-      </form>
+@media (max-width: 1024px) {
+  .layout { grid-template-columns: 1fr; }
+  .panel { min-height: auto; }
+}
 
-      <div id="adminPanel" hidden>
-        <div class="row between">
-          <h3 id="adminPanelTitle">관리자 패널</h3>
-          <button id="logoutBtn" class="btn ghost">Logout</button>
-        </div>
+@media (max-width: 768px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .top-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .row {
+    flex-wrap: wrap;
+  }
+  .row label {
+    min-width: 140px;
+  }
+  .stats {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+  .card {
+    grid-template-columns: 48px 1fr auto;
+    padding: 8px;
+  }
+  .card img {
+    width: 48px;
+    height: 48px;
+  }
+  .box-visual {
+    min-height: 220px;
+  }
+  .box-visual img {
+    height: 220px;
+  }
+  input, select, button {
+    font-size: 16px;
+  }
+}
 
-        <section>
-          <h4 id="manageBoxTitle">박스 관리</h4>
-          <form id="boxForm" class="grid-2">
-            <input id="boxNameKo" placeholder="이름(ko)" required />
-            <input id="boxNameEn" placeholder="Name(en)" required />
-            <input id="boxNameJa" placeholder="名前(ja)" required />
-            <input id="boxLength" type="number" min="1" step="0.1" placeholder="length cm" required />
-            <input id="boxImageUrl" placeholder="image url (optional)" />
-            <input id="boxImageFile" type="file" accept="image/*" />
-            <button class="btn" id="saveBoxBtn">저장</button>
-          </form>
-          <div id="boxAdminList" class="list compact"></div>
-        </section>
-
-        <section>
-          <h4 id="manageGameTitle">게임 관리</h4>
-          <form id="gameForm" class="grid-2">
-            <input id="gameNameKo" placeholder="게임명(ko)" required />
-            <input id="gameNameEn" placeholder="Game(en)" required />
-            <input id="gameNameJa" placeholder="ゲーム(ja)" required />
-            <input id="gameLength" type="number" min="0.1" step="0.1" placeholder="length cm" required />
-            <input id="gameImageUrl" placeholder="list image url (optional)" />
-            <input id="gameImageFile" type="file" accept="image/*" />
-            <input id="gameBoxImageUrl" placeholder="box image url (optional)" />
-            <input id="gameBoxImageFile" type="file" accept="image/*" />
-            <input id="gamePlayersMin" type="number" min="1" step="1" placeholder="min players" required />
-            <input id="gamePlayersMax" type="number" min="1" step="1" placeholder="max players" required />
-            <select id="gameDifficulty">
-              <option value="1">초보자</option>
-              <option value="2" selected>중급자</option>
-              <option value="3">고급자</option>
-            </select>
-            <select id="gameCategory"></select>
-            <button class="btn" id="saveGameBtn">저장</button>
-          </form>
-          <div id="gameAdminList" class="list compact"></div>
-        </section>
-      </div>
-    </dialog>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <script src="app.js"></script>
-  </body>
-</html>
+@media (max-width: 480px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .layout {
+    padding: 8px;
+    gap: 8px;
+  }
+  .panel {
+    padding: 10px;
+    border-radius: 10px;
+  }
+  .box-visual {
+    min-height: 170px;
+  }
+  .box-visual img {
+    height: 170px;
+  }
+  .box-placeholder {
+    font-size: 18px;
+  }
+  .chips {
+    gap: 4px;
+  }
+  .chip {
+    font-size: 11px;
+  }
+}
