@@ -23,6 +23,7 @@ const i18n = {
     allDifficulty: "전체 난이도",
     add: "담기",
     full: "초과됨",
+    overflowMsg: "남은 공간이 부족해서 담을 수 없습니다.",
     cancel: "취소",
     login: "로그인",
   },
@@ -47,6 +48,7 @@ const i18n = {
     allDifficulty: "All difficulties",
     add: "Add",
     full: "Overflow",
+    overflowMsg: "Not enough remaining space to add this game.",
     cancel: "Cancel",
     login: "Login",
   },
@@ -71,6 +73,7 @@ const i18n = {
     allDifficulty: "すべての難易度",
     add: "追加",
     full: "超過",
+    overflowMsg: "残り容量が足りないため追加できません。",
     cancel: "キャンセル",
     login: "ログイン",
   },
@@ -366,6 +369,12 @@ function animateToBox(imgSrc, fromEl) {
 function addGame(id, sourceEl) {
   const game = state.games.find((g) => g.id === id);
   if (!game) return;
+  const box = selectedBox();
+  const nextUsed = calcUsed() + Number(game.lengthCm);
+  if (nextUsed - box.lengthCm > 0.0001) {
+    alert(text("overflowMsg"));
+    return;
+  }
   state.selectedGameIds.push(id);
   if (sourceEl) animateToBox(game.imageUrl, sourceEl);
   persist();
