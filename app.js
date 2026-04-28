@@ -298,16 +298,24 @@ async function fetchSharedData() {
       id: c.id,
       name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja },
     }));
-    const hasMisc = mapped.some((c) => {
+    const deduped = [];
+    const seen = new Set();
+    for (const c of mapped) {
+      const key = `${(c.name?.en || "").trim().toLowerCase()}|${(c.name?.ko || "").trim()}|${(c.name?.ja || "").trim()}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(c);
+    }
+    const hasMisc = deduped.some((c) => {
       const ko = c.name?.ko || "";
       const en = c.name?.en || "";
       const ja = c.name?.ja || "";
       return ko.includes("기타") || /other|misc/i.test(en) || ja.includes("その他");
     });
     if (!hasMisc) {
-      mapped.push({ id: "c11-misc", name: { ko: "기타", en: "Other / Misc", ja: "その他" } });
+      deduped.push({ id: "c11-misc", name: { ko: "기타", en: "Other / Misc", ja: "その他" } });
     }
-    state.categories = mapped;
+    state.categories = deduped;
   }
   if (boxes?.length) {
     state.boxes = boxes.map((b) => ({
@@ -823,7 +831,7 @@ function bind() {
     const rawCategoryId = el("gameCategory").value;
     const categoryId = isUuid(rawCategoryId) ? rawCategoryId : null;
     if (!categoryId) {
-      alert("카테고리 UUID가 없어 기본 카테고리 없이 저장됩니다. (Supabase categories 테이블을 먼저 채워주세요)");
+      console.warn("Category UUID missing. Saving game without category_id.");
     }
 
     const payload = {
