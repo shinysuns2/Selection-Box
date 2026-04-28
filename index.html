@@ -54,6 +54,7 @@
         <h2 id="selectedTitle">선택 박스</h2>
         <div id="boxVisual" class="box-visual">
           <img id="boxImage" alt="box" />
+          <div id="boxPlaceholder" class="box-placeholder">Selection Box</div>
           <div id="dropZone" class="drop-zone"></div>
         </div>
         <div class="stats">
@@ -94,7 +95,7 @@
             <input id="boxNameEn" placeholder="Name(en)" required />
             <input id="boxNameJa" placeholder="名前(ja)" required />
             <input id="boxLength" type="number" min="1" step="0.1" placeholder="length cm" required />
-            <input id="boxImageUrl" placeholder="image url" required />
+            <input id="boxImageUrl" placeholder="image url (optional)" />
             <button class="btn" id="saveBoxBtn">저장</button>
           </form>
           <div id="boxAdminList" class="list compact"></div>
