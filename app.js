@@ -623,6 +623,61 @@ function bind() {
     el("adminPassword").value = "";
   });
 
+  // ✅ 박스 저장
+  el("boxForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      name_ko: el("boxNameKo").value.trim(),
+      name_en: el("boxNameEn").value.trim(),
+      name_ja: el("boxNameJa").value.trim(),
+      length_cm: Number(el("boxLength").value),
+      image_url: el("boxImageUrl").value.trim() || "",
+      is_active: true,
+    };
+
+    const { error } = editingBoxId
+      ? await supabaseClient.from("boxes").update(payload).eq("id", editingBoxId)
+      : await supabaseClient.from("boxes").insert(payload);
+
+    raiseIfError(error, "박스 저장 실패");
+    editingBoxId = null;
+    e.target.reset();
+    await fetchSharedData();
+    render();
+    alert("박스 저장 완료");
+  });
+
+  // ✅ 게임 저장
+  el("gameForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const payload = {
+      name_ko: el("gameNameKo").value.trim(),
+      name_en: el("gameNameEn").value.trim(),
+      name_ja: el("gameNameJa").value.trim(),
+      length_cm: Number(el("gameLength").value),
+      image_url: el("gameImageUrl").value.trim() || "",
+      box_image_url: el("gameBoxImageUrl").value.trim() || "",
+      players_min: Number(el("gamePlayersMin").value),
+      players_max: Number(el("gamePlayersMax").value),
+      difficulty: Number(el("gameDifficulty").value),
+      category_id: el("gameCategory").value,
+      is_active: true,
+    };
+
+    const { error } = editingGameId
+      ? await supabaseClient.from("games").update(payload).eq("id", editingGameId)
+      : await supabaseClient.from("games").insert(payload);
+
+    raiseIfError(error, "게임 저장 실패");
+    editingGameId = null;
+    e.target.reset();
+    await fetchSharedData();
+    render();
+    alert("게임 저장 완료");
+  });
+
   el("promoForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const links = [
