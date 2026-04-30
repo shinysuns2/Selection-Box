@@ -479,7 +479,6 @@ function renderStaticText() {
     sortSel.options[1].textContent = text("sort_thickness");
   }
 }
-
 function normalizeUrl(raw) {
   const value = String(raw || "").trim();
   if (!value) return "";
@@ -644,6 +643,9 @@ function recommendGames() {
   const pickedDifficultyTiers = new Set(picked.map((g) => difficultyTier(g.difficulty)));
   const pickedPlayerCenters = picked.map((g) => Math.round((Number(g.playersMin) + Number(g.playersMax)) / 2));
 
+  // ✅ 모바일(<=768px): 3개 / 그 외: 5개
+  const recommendLimit = window.matchMedia("(max-width: 768px)").matches ? 3 : 5;
+
   return state.games
     .filter((g) => !pickedIds.has(g.id))
     .filter((g) => remain >= Number(g.lengthCm))
@@ -663,7 +665,7 @@ function recommendGames() {
       return { game: g, totalScore, fitGap, difficultyScore, mechanismScore, playerScore };
     })
     .sort((a, b) => b.totalScore - a.totalScore || a.fitGap - b.fitGap)
-    .slice(0, 5);
+    .slice(0, recommendLimit);
 }
 
 function renderRecommend() {
