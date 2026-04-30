@@ -100,7 +100,8 @@
         <h3 id="adminLoginTitle">관리자 로그인</h3>
         <input id="adminPassword" type="password" placeholder="password" required />
         <menu>
-          <button value="cancel" class="btn ghost" id="cancelBtn">취소</button>
+          <!-- ✅ 핵심 수정: submit이 아닌 button -->
+          <button type="button" class="btn ghost" id="cancelBtn">취소</button>
           <button value="default" class="btn" id="loginBtn">로그인</button>
         </menu>
       </form>
