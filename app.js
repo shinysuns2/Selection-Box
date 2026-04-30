@@ -963,20 +963,13 @@ function bind() {
   const dialog = el("adminDialog");
   el("adminBtn").addEventListener("click", () => dialog.showModal());
 
-  // ✅ Cancel 버튼 즉시 닫기
+  // cancel은 validation 없이 즉시 닫기
   el("cancelBtn")?.addEventListener("click", (e) => {
     e.preventDefault();
     dialog.close("cancel");
   });
 
   el("adminLoginForm").addEventListener("submit", async (e) => {
-    // submitter가 cancel이면 로그인 로직 수행하지 않고 닫기
-    if (e.submitter?.value === "cancel") {
-      e.preventDefault();
-      dialog.close("cancel");
-      return;
-    }
-
     e.preventDefault();
     const password = el("adminPassword").value;
     const { error } = await supabaseClient.auth.signInWithPassword({ email: ADMIN_EMAIL, password });
