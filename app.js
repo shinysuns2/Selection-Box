@@ -122,6 +122,7 @@ const defaultState = {
   selectedCategory: "all",
   selectedPlayers: "all",
   selectedDifficulty: "all",
+  sortBy: "abc",
   boxes: [
     {
       id: "b1",
@@ -194,7 +195,6 @@ const defaultState = {
 let state = loadState();
 let editingBoxId = null;
 let editingGameId = null;
-let gamesRenderCount = Number.MAX_SAFE_INTEGER;
 let draggingGameId = null;
 
 const el = (id) => document.getElementById(id);
@@ -213,6 +213,7 @@ function loadState() {
     loaded.boxes = (loaded.boxes || []).map((b) => ({ ...b, imageUrl: b.imageUrl || "" }));
     loaded.selectedPlayers = loaded.selectedPlayers || "all";
     loaded.selectedDifficulty = loaded.selectedDifficulty || "all";
+    loaded.sortBy = loaded.sortBy || "abc";
     loaded.promoLinks = (loaded.promoLinks || defaultState.promoLinks).slice(0, 3);
     return loaded;
   } catch {
@@ -230,6 +231,7 @@ function persist() {
       selectedCategory: state.selectedCategory,
       selectedPlayers: state.selectedPlayers,
       selectedDifficulty: state.selectedDifficulty,
+      sortBy: state.sortBy,
       selectedGameIds: state.selectedGameIds,
       promoLinks: state.promoLinks,
     })
@@ -297,9 +299,7 @@ function raiseIfError(error, fallback) {
 }
 
 function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    String(value || "")
-  );
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
 async function fetchSharedData() {
@@ -311,6 +311,7 @@ async function fetchSharedData() {
   raiseIfError(catRes.error, "카테고리 로딩 실패");
   raiseIfError(boxRes.error, "박스 로딩 실패");
   raiseIfError(gameRes.error, "게임 로딩 실패");
+
   const { data: categories } = catRes;
   const { data: boxes } = boxRes;
   const { data: games } = gameRes;
@@ -339,6 +340,7 @@ async function fetchSharedData() {
     }
     state.categories = deduped;
   }
+
   if (boxes?.length) {
     state.boxes = boxes.map((b) => ({
       id: b.id,
@@ -347,6 +349,7 @@ async function fetchSharedData() {
       imageUrl: b.image_url || "",
     }));
   }
+
   if (games?.length) {
     state.games = games.map((g) => ({
       id: g.id,
@@ -373,9 +376,7 @@ function selectedBox() {
 }
 
 function selectedGames() {
-  return state.selectedGameIds
-    .map((id) => state.games.find((g) => g.id === id))
-    .filter(Boolean);
+  return state.selectedGameIds.map((id) => state.games.find((g) => g.id === id)).filter(Boolean);
 }
 
 function calcUsed() {
@@ -384,18 +385,22 @@ function calcUsed() {
 
 function renderStaticText() {
   [
-    "appTitle","gamesTitle","boxLabel","categoryLabel","selectedTitle",
-    "playersLabel","difficultyLabel","usedLabel","remainingLabel","fillLabel","recommendTitle",
-    "adminLoginTitle","adminPanelTitle","manageBoxTitle","manageGameTitle","promoTitle"
+    "appTitle", "gamesTitle", "boxLabel", "categoryLabel", "selectedTitle",
+    "playersLabel", "difficultyLabel", "usedLabel", "remainingLabel", "fillLabel",
+    "recommendTitle", "adminLoginTitle", "adminPanelTitle", "manageBoxTitle",
+    "manageGameTitle", "promoTitle",
   ].forEach((k) => (el(k).textContent = text(k)));
+
   el("cancelBtn").textContent = text("cancel");
   el("loginBtn").textContent = text("login");
   el("resetFiltersBtn").textContent = text("resetFilters");
   el("exportImageBtn").textContent = text("exportImage");
   el("resetSelectionBtn").textContent = text("resetSelection");
+
   const desktopDragEnabled = window.matchMedia("(pointer: fine) and (min-width: 1025px)").matches;
   const dragHintEl = el("dragHint");
   if (dragHintEl) dragHintEl.textContent = text(desktopDragEnabled ? "dragHintDesktop" : "dragHintTouch");
+
   const diffOpts = el("gameDifficulty")?.options;
   if (diffOpts?.length >= 3) {
     diffOpts[0].textContent = text("diff_beginner");
@@ -434,11 +439,10 @@ function renderPromoLinks() {
   });
 
   el("promoLinks").innerHTML = links
-    .map(
-      (item) =>
-        item.enabled
-          ? `<a class="promo-link-btn" href="${item.url}" target="_blank" rel="noopener noreferrer">${item.name}</a>`
-          : `<a class="promo-link-btn" href="#" aria-disabled="true" style="opacity:.5;pointer-events:none;">${item.name}</a>`
+    .map((item) =>
+      item.enabled
+        ? `<a class="promo-link-btn" href="${item.url}" target="_blank" rel="noopener noreferrer">${item.name}</a>`
+        : `<a class="promo-link-btn" href="#" aria-disabled="true" style="opacity:.5;pointer-events:none;">${item.name}</a>`
     )
     .join("");
 
@@ -453,9 +457,7 @@ function renderPromoLinks() {
 
 function renderSelectors() {
   const boxSel = el("boxSelect");
-  boxSel.innerHTML = state.boxes
-    .map((b) => `<option value="${b.id}">${nameOf(b)} (${b.lengthCm}cm)</option>`)
-    .join("");
+  boxSel.innerHTML = state.boxes.map((b) => `<option value="${b.id}">${nameOf(b)} (${b.lengthCm}cm)</option>`).join("");
   boxSel.value = selectedBox().id;
 
   const catSel = el("categorySelect");
@@ -487,25 +489,31 @@ function renderSelectors() {
     .join("");
   diffSel.value = state.selectedDifficulty;
 
-  el("gameCategory").innerHTML = state.categories
-    .map((c) => `<option value="${c.id}">${nameOf(c)}</option>`)
-    .join("");
+  el("gameCategory").innerHTML = state.categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`).join("");
 }
 
 function renderGames() {
   const q = el("searchInput").value?.trim().toLowerCase() || "";
+
   const list = state.games.filter((g) => {
     const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
     const playersOk =
       state.selectedPlayers === "all" ||
       (state.selectedPlayers === "6plus"
         ? Number(g.playersMax) >= 6
-        : Number(g.playersMin) <= Number(state.selectedPlayers) &&
-          Number(state.selectedPlayers) <= Number(g.playersMax));
-    const difficultyOk =
-      state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
+        : Number(g.playersMin) <= Number(state.selectedPlayers) && Number(state.selectedPlayers) <= Number(g.playersMax));
+    const difficultyOk = state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
     const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
     return categoryOk && playersOk && difficultyOk && nameOk;
+  });
+
+  list.sort((a, b) => {
+    if ((state.sortBy || "abc") === "thickness") {
+      const diff = Number(a.lengthCm) - Number(b.lengthCm);
+      if (diff !== 0) return diff;
+      return nameOf(a).localeCompare(nameOf(b), undefined, { sensitivity: "base" });
+    }
+    return nameOf(a).localeCompare(nameOf(b), undefined, { sensitivity: "base" });
   });
 
   el("gamesList").innerHTML = list
@@ -569,16 +577,16 @@ function recommendGames() {
     .map((g) => {
       const remainAfter = remain - Number(g.lengthCm);
       const fitGap = Math.max(0, remainAfter);
+
       const hasPicked = picked.length > 0;
       const difficultyScore = !hasPicked ? 0 : pickedDifficultyTiers.has(difficultyTier(g.difficulty)) ? 50 : 25;
       const mechanismScore = !hasPicked ? 0 : pickedCats.has(g.categoryId) ? 50 : 0;
-      const candidateCenter = Math.round((Number(g.playersMin) + Number(g.playersMax)) / 2);
-      const playerDiff = !hasPicked
-        ? Infinity
-        : Math.min(...pickedPlayerCenters.map((v) => Math.abs(v - candidateCenter)));
-      const playerScore = !hasPicked ? 0 : playerDiff === 0 ? 50 : playerDiff === 1 ? 25 : 0;
-      const totalScore = difficultyScore + mechanismScore + playerScore;
 
+      const candidateCenter = Math.round((Number(g.playersMin) + Number(g.playersMax)) / 2);
+      const playerDiff = !hasPicked ? Infinity : Math.min(...pickedPlayerCenters.map((v) => Math.abs(v - candidateCenter)));
+      const playerScore = !hasPicked ? 0 : playerDiff === 0 ? 50 : playerDiff === 1 ? 25 : 0;
+
+      const totalScore = difficultyScore + mechanismScore + playerScore;
       return { game: g, totalScore, fitGap, difficultyScore, mechanismScore, playerScore };
     })
     .sort((a, b) => b.totalScore - a.totalScore || a.fitGap - b.fitGap)
@@ -669,6 +677,7 @@ function addGame(id, sourceEl) {
 function render() {
   document.documentElement.classList.toggle("dark", state.dark);
   el("languageSelect").value = state.lang;
+  if (el("sortSelect")) el("sortSelect").value = state.sortBy || "abc";
   renderStaticText();
   renderSelectors();
   renderGames();
@@ -693,6 +702,12 @@ function bind() {
     state.dark = !state.dark;
     persist();
     render();
+  });
+
+  el("sortSelect")?.addEventListener("change", (e) => {
+    state.sortBy = e.target.value || "abc";
+    persist();
+    renderGames();
   });
 
   el("boxSelect").addEventListener("change", (e) => {
@@ -890,10 +905,7 @@ function bind() {
   el("adminLoginForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const password = el("adminPassword").value;
-    const { error } = await supabaseClient.auth.signInWithPassword({
-      email: ADMIN_EMAIL,
-      password,
-    });
+    const { error } = await supabaseClient.auth.signInWithPassword({ email: ADMIN_EMAIL, password });
     if (!error) {
       el("adminPanel").hidden = false;
       el("adminLoginForm").hidden = true;
@@ -1000,7 +1012,7 @@ function bind() {
 
 async function init() {
   bind();
-  render(); // show local defaults immediately
+  render();
   try {
     await fetchSharedData();
   } catch (error) {
