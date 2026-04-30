@@ -388,7 +388,6 @@ function renderStaticText() {
     "playersLabel","difficultyLabel","usedLabel","remainingLabel","fillLabel","recommendTitle",
     "adminLoginTitle","adminPanelTitle","manageBoxTitle","manageGameTitle","promoTitle"
   ].forEach((k) => (el(k).textContent = text(k)));
-  el("selectedTitle").textContent = "Selection Box";
   el("cancelBtn").textContent = text("cancel");
   el("loginBtn").textContent = text("login");
   el("resetFiltersBtn").textContent = text("resetFilters");
@@ -433,6 +432,7 @@ function renderPromoLinks() {
       enabled: Boolean(url),
     };
   });
+
   el("promoLinks").innerHTML = links
     .map(
       (item) =>
@@ -441,6 +441,7 @@ function renderPromoLinks() {
           : `<a class="promo-link-btn" href="#" aria-disabled="true" style="opacity:.5;pointer-events:none;">${item.name}</a>`
     )
     .join("");
+
   const raw = state.promoLinks || [];
   if (el("promoName1")) el("promoName1").value = raw[0]?.name || "";
   if (el("promoUrl1")) el("promoUrl1").value = raw[0]?.url || "";
@@ -506,7 +507,6 @@ function renderGames() {
     const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
     return categoryOk && playersOk && difficultyOk && nameOk;
   });
-  const visible = list.slice(0, gamesRenderCount);
 
   el("gamesList").innerHTML = list
     .map(
@@ -544,12 +544,10 @@ function renderBox() {
     .join("");
 
   const filledHtml = selectedGames()
-    .map(
-      (g) => {
-        const widthPct = (Number(g.lengthCm) / box.lengthCm) * 100;
-        return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${g.boxImageUrl || g.imageUrl}')"></figure>`;
-      }
-    )
+    .map((g) => {
+      const widthPct = (Number(g.lengthCm) / box.lengthCm) * 100;
+      return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${g.boxImageUrl || g.imageUrl}')"></figure>`;
+    })
     .join("");
   const emptyPct = Math.max(0, (remain / box.lengthCm) * 100);
   const emptyHtml = emptyPct > 0.01 ? `<div class="empty-slot" style="width:${emptyPct}%; flex:0 0 ${emptyPct}%"></div>` : "";
@@ -571,27 +569,17 @@ function recommendGames() {
     .map((g) => {
       const remainAfter = remain - Number(g.lengthCm);
       const fitGap = Math.max(0, remainAfter);
-
       const hasPicked = picked.length > 0;
       const difficultyScore = !hasPicked ? 0 : pickedDifficultyTiers.has(difficultyTier(g.difficulty)) ? 50 : 25;
       const mechanismScore = !hasPicked ? 0 : pickedCats.has(g.categoryId) ? 50 : 0;
-
       const candidateCenter = Math.round((Number(g.playersMin) + Number(g.playersMax)) / 2);
       const playerDiff = !hasPicked
         ? Infinity
         : Math.min(...pickedPlayerCenters.map((v) => Math.abs(v - candidateCenter)));
       const playerScore = !hasPicked ? 0 : playerDiff === 0 ? 50 : playerDiff === 1 ? 25 : 0;
-
       const totalScore = difficultyScore + mechanismScore + playerScore;
 
-      return {
-        game: g,
-        totalScore,
-        fitGap,
-        difficultyScore,
-        mechanismScore,
-        playerScore,
-      };
+      return { game: g, totalScore, fitGap, difficultyScore, mechanismScore, playerScore };
     })
     .sort((a, b) => b.totalScore - a.totalScore || a.fitGap - b.fitGap)
     .slice(0, 5);
@@ -611,9 +599,7 @@ function renderRecommend() {
   el("recommendList").innerHTML = items
     .map(({ game }) => `<article class="card" data-game-id="${game.id}" draggable="true">
       <img src="${game.imageUrl}" alt="${nameOf(game)}" loading="lazy" decoding="async" />
-      <div class="meta">
-        <div>${nameOf(game)}</div>
-      </div>
+      <div class="meta"><div>${nameOf(game)}</div></div>
       <button class="btn add-btn" data-id="${game.id}">${text("add")}</button>
     </article>`)
     .join("");
@@ -959,6 +945,7 @@ function bind() {
       alert("게임 이미지 파일 업로드 또는 URL 입력이 필요합니다.");
       return;
     }
+
     const boxFile = el("gameBoxImageFile").files?.[0];
     const boxFileImage = await fileToDataUrl(boxFile);
     const boxUrlImage = el("gameBoxImageUrl").value.trim();
@@ -986,6 +973,7 @@ function bind() {
     const { error } = editingGameId
       ? await supabaseClient.from("games").update(payload).eq("id", editingGameId)
       : await supabaseClient.from("games").insert(payload);
+
     if (error?.message?.includes("box_image_url")) {
       alert("Supabase games 테이블에 box_image_url 컬럼을 추가해주세요. SQL: alter table public.games add column if not exists box_image_url text;");
     }
