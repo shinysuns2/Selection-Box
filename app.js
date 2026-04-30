@@ -438,6 +438,16 @@ function calcUsed() {
   return selectedGames().reduce((sum, g) => sum + Number(g.lengthCm), 0);
 }
 
+function remainingSpace() {
+  const box = selectedBox();
+  if (!box) return 0;
+  return box.lengthCm - calcUsed();
+}
+
+function canFitGame(game) {
+  return Number(game.lengthCm) <= remainingSpace() + 0.0001;
+}
+
 function renderStaticText() {
   [
     "appTitle", "gamesTitle", "boxLabel", "categoryLabel", "selectedTitle",
@@ -578,16 +588,17 @@ function renderGames() {
   });
 
   el("gamesList").innerHTML = list
-    .map(
-      (g) => `<article class="card" data-game-id="${g.id}" draggable="true">
+    .map((g) => {
+      const canFit = canFitGame(g);
+      return `<article class="card" data-game-id="${g.id}" draggable="${canFit ? "true" : "false"}" ${canFit ? "" : 'data-blocked="1" style="opacity:.55;"'}>
         <img src="${g.imageUrl}" alt="${nameOf(g)}" loading="lazy" decoding="async" />
         <div class="meta">
           <div>${nameOf(g)}</div>
           <small>${g.lengthCm}cm · ${nameOf(state.categories.find((c) => c.id === g.categoryId))} · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)}</small>
         </div>
-        <button class="btn add-btn" data-id="${g.id}">${text("add")}</button>
-      </article>`
-    )
+        <button class="btn add-btn" data-id="${g.id}" ${canFit ? "" : "disabled"}>${canFit ? text("add") : text("full")}</button>
+      </article>`;
+    })
     .join("");
 }
 
@@ -723,9 +734,7 @@ function animateToBox(imgSrc, fromEl) {
 function addGame(id, sourceEl) {
   const game = state.games.find((g) => g.id === id);
   if (!game) return;
-  const box = selectedBox();
-  const nextUsed = calcUsed() + Number(game.lengthCm);
-  if (nextUsed - box.lengthCm > 0.0001) {
+  if (!canFitGame(game)) {
     alert(text("overflowMsg"));
     return;
   }
@@ -858,6 +867,10 @@ function bind() {
     document.body.addEventListener("dragstart", (e) => {
       const card = e.target.closest(".card[data-game-id]");
       if (!card) return;
+      if (card.dataset.blocked === "1") {
+        e.preventDefault();
+        return;
+      }
       draggingGameId = card.dataset.gameId;
       e.dataTransfer?.setData("text/plain", draggingGameId || "");
       if (e.dataTransfer) e.dataTransfer.effectAllowed = "copy";
@@ -892,6 +905,7 @@ function bind() {
   document.body.addEventListener("click", async (e) => {
     const addBtn = e.target.closest(".add-btn");
     if (addBtn) {
+      if (addBtn.disabled) return;
       const card = addBtn.closest(".card");
       const img = card?.querySelector("img");
       addGame(addBtn.dataset.id, img || addBtn);
@@ -963,7 +977,6 @@ function bind() {
   const dialog = el("adminDialog");
   el("adminBtn").addEventListener("click", () => dialog.showModal());
 
-  // cancel은 validation 없이 즉시 닫기
   el("cancelBtn")?.addEventListener("click", (e) => {
     e.preventDefault();
     dialog.close("cancel");
