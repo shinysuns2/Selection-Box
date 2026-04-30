@@ -708,9 +708,11 @@ function bind() {
     btn.disabled = true;
     btn.textContent = state.lang === "ko" ? "생성중..." : "Exporting...";
     try {
+      const dpr = window.devicePixelRatio || 1;
+      const exportScale = Math.min(4, Math.max(2.5, dpr * 2));
       const canvas = await window.html2canvas(target, {
         backgroundColor: null,
-        scale: Math.min(2, window.devicePixelRatio || 1),
+        scale: exportScale,
         useCORS: true,
         onclone: (doc) => {
           const cloneTarget = doc.getElementById("exportBoxArea");
