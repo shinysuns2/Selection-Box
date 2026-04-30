@@ -186,6 +186,7 @@ canvas {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
 
 .card img {
@@ -238,6 +239,43 @@ canvas {
   background: transparent;
   color: var(--text);
   border-color: var(--border);
+}
+
+/* ===== Drag affordance (desktop only) ===== */
+@media (pointer: fine) {
+  #gamesList .card[data-game-id],
+  #recommendList .card[data-game-id] {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-drag: element;
+  }
+
+  #gamesList .card[data-game-id]:hover,
+  #recommendList .card[data-game-id]:hover {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+    box-shadow: 0 2px 10px rgba(90, 103, 216, 0.14);
+  }
+
+  #gamesList .card[data-game-id]:active,
+  #recommendList .card[data-game-id]:active {
+    cursor: grabbing;
+    transform: scale(0.995);
+  }
+
+  #gamesList .card[data-game-id].is-dragging,
+  #recommendList .card[data-game-id].is-dragging {
+    cursor: grabbing;
+    opacity: 0.86;
+    transform: scale(0.985);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+    border-color: var(--accent);
+  }
+
+  /* 버튼 위에서는 포인터 유지 */
+  #gamesList .card .btn,
+  #recommendList .card .btn {
+    cursor: pointer;
+  }
 }
 
 .box-visual {
