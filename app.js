@@ -35,6 +35,8 @@ const i18n = {
     resetFilters: "필터 초기화",
     exportImage: "이미지 생성",
     resetSelection: "박스 초기화",
+    dragHintDesktop: "데스크탑에서는 게임 카드를 드래그해서 박스에 담을 수 있어요.",
+    dragHintTouch: "게임 카드의 '담기' 버튼으로 박스에 추가할 수 있어요.",
     cancel: "취소",
     login: "로그인",
   },
@@ -68,6 +70,8 @@ const i18n = {
     resetFilters: "Reset filters",
     exportImage: "Export Image",
     resetSelection: "Clear Box",
+    dragHintDesktop: "On desktop, drag game cards into the box.",
+    dragHintTouch: "Use the Add button on each game card to place it in the box.",
     cancel: "Cancel",
     login: "Login",
   },
@@ -101,6 +105,8 @@ const i18n = {
     resetFilters: "絞り込み解除",
     exportImage: "画像を書き出し",
     resetSelection: "ボックス初期化",
+    dragHintDesktop: "デスクトップではゲームカードをドラッグしてボックスに入れられます。",
+    dragHintTouch: "各ゲームカードの追加ボタンでボックスに入れられます。",
     cancel: "キャンセル",
     login: "ログイン",
   },
@@ -378,6 +384,9 @@ function renderStaticText() {
   el("resetFiltersBtn").textContent = text("resetFilters");
   el("exportImageBtn").textContent = text("exportImage");
   el("resetSelectionBtn").textContent = text("resetSelection");
+  const desktopDragEnabled = window.matchMedia("(pointer: fine) and (min-width: 1025px)").matches;
+  const dragHintEl = el("dragHint");
+  if (dragHintEl) dragHintEl.textContent = text(desktopDragEnabled ? "dragHintDesktop" : "dragHintTouch");
   const diffOpts = el("gameDifficulty")?.options;
   if (diffOpts?.length >= 3) {
     diffOpts[0].textContent = text("diff_beginner");
