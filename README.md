@@ -24,3 +24,10 @@ This is a static app. Open `index.html` in any browser.
 - Data is persisted in browser `localStorage`.
 - Shared catalog data (`boxes`, `games`, `categories`) is read/written via Supabase.
 - Local browser storage now keeps only personal UI state and selected-in-box items.
+
+## Quick controls
+
+- Drag a game card from **Game List** or **Recommendations** into the center box area to add it.
+- Use **Reset Box** to clear current in-box selections.
+- Use **Create Image** to export the current box layout as an image.
+- Open **Admin** to manage boxes, games, and promo links.
