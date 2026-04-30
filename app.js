@@ -17,6 +17,7 @@ const i18n = {
     remainingLabel: "남음",
     fillLabel: "채움률",
     recommendTitle: "추천 게임",
+    promoTitle: "홍보 버튼 관리",
     adminLoginTitle: "관리자 로그인",
     adminPanelTitle: "관리자 패널",
     manageBoxTitle: "박스 관리",
@@ -52,6 +53,7 @@ const i18n = {
     remainingLabel: "Remaining",
     fillLabel: "Fill",
     recommendTitle: "Recommended Games",
+    promoTitle: "Promo Button Admin",
     adminLoginTitle: "Admin Login",
     adminPanelTitle: "Admin Panel",
     manageBoxTitle: "Manage Boxes",
@@ -87,6 +89,7 @@ const i18n = {
     remainingLabel: "残り",
     fillLabel: "充填率",
     recommendTitle: "おすすめゲーム",
+    promoTitle: "プロモボタン管理",
     adminLoginTitle: "管理者ログイン",
     adminPanelTitle: "管理者パネル",
     manageBoxTitle: "ボックス管理",
@@ -180,6 +183,11 @@ const defaultState = {
     { from: "g2", to: "g3", score: 1.2 },
     { from: "g3", to: "g1", score: 1.1 },
   ],
+  promoLinks: [
+    { name: "", url: "" },
+    { name: "", url: "" },
+    { name: "", url: "" },
+  ],
   selectedGameIds: [],
 };
 
@@ -205,6 +213,7 @@ function loadState() {
     loaded.boxes = (loaded.boxes || []).map((b) => ({ ...b, imageUrl: b.imageUrl || "" }));
     loaded.selectedPlayers = loaded.selectedPlayers || "all";
     loaded.selectedDifficulty = loaded.selectedDifficulty || "all";
+    loaded.promoLinks = (loaded.promoLinks || defaultState.promoLinks).slice(0, 3);
     return loaded;
   } catch {
     return structuredClone(defaultState);
@@ -222,6 +231,7 @@ function persist() {
       selectedPlayers: state.selectedPlayers,
       selectedDifficulty: state.selectedDifficulty,
       selectedGameIds: state.selectedGameIds,
+      promoLinks: state.promoLinks,
     })
   );
 }
@@ -376,7 +386,7 @@ function renderStaticText() {
   [
     "appTitle","gamesTitle","boxLabel","categoryLabel","selectedTitle",
     "playersLabel","difficultyLabel","usedLabel","remainingLabel","fillLabel","recommendTitle",
-    "adminLoginTitle","adminPanelTitle","manageBoxTitle","manageGameTitle"
+    "adminLoginTitle","adminPanelTitle","manageBoxTitle","manageGameTitle","promoTitle"
   ].forEach((k) => (el(k).textContent = text(k)));
   el("selectedTitle").textContent = "Selection Box";
   el("cancelBtn").textContent = text("cancel");
@@ -393,6 +403,23 @@ function renderStaticText() {
     diffOpts[1].textContent = text("diff_intermediate");
     diffOpts[2].textContent = text("diff_advanced");
   }
+}
+
+function renderPromoLinks() {
+  const links = (state.promoLinks || []).filter((x) => x?.name && x?.url);
+  el("promoLinks").innerHTML = links
+    .map(
+      (item) =>
+        `<a class="promo-link-btn" href="${item.url}" target="_blank" rel="noopener noreferrer">${item.name}</a>`
+    )
+    .join("");
+  const raw = state.promoLinks || [];
+  if (el("promoName1")) el("promoName1").value = raw[0]?.name || "";
+  if (el("promoUrl1")) el("promoUrl1").value = raw[0]?.url || "";
+  if (el("promoName2")) el("promoName2").value = raw[1]?.name || "";
+  if (el("promoUrl2")) el("promoUrl2").value = raw[1]?.url || "";
+  if (el("promoName3")) el("promoName3").value = raw[2]?.name || "";
+  if (el("promoUrl3")) el("promoUrl3").value = raw[2]?.url || "";
 }
 
 function renderSelectors() {
@@ -636,6 +663,7 @@ function render() {
   renderGames();
   renderBox();
   renderRecommend();
+  renderPromoLinks();
   renderAdminLists();
 }
 
@@ -942,6 +970,17 @@ function bind() {
     persist();
     editingGameId = null;
     e.target.reset();
+    render();
+  });
+
+  el("promoForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    state.promoLinks = [
+      { name: el("promoName1").value.trim(), url: el("promoUrl1").value.trim() },
+      { name: el("promoName2").value.trim(), url: el("promoUrl2").value.trim() },
+      { name: el("promoName3").value.trim(), url: el("promoUrl3").value.trim() },
+    ];
+    persist();
     render();
   });
 }
