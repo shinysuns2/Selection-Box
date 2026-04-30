@@ -53,6 +53,11 @@ body {
   color: var(--muted);
   font-size: 14px;
 }
+.drag-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
 #loadMoreGamesBtn { margin-top: 10px; width: 100%; }
 .card {
   border: 1px solid var(--border);
@@ -73,6 +78,16 @@ body {
   aspect-ratio: 10 / 14;
   object-fit: contain;
   background: rgba(15, 23, 42, 0.04);
+}
+@media (pointer: fine) and (min-width: 1025px) {
+  #gamesList .card[data-game-id],
+  #recommendList .card[data-game-id] {
+    cursor: grab;
+  }
+  #gamesList .card[data-game-id]:active,
+  #recommendList .card[data-game-id]:active {
+    cursor: grabbing;
+  }
 }
 .meta small { color: var(--muted); }
 .card.notice { grid-template-columns: 1fr; }
