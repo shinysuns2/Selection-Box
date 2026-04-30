@@ -16,13 +16,30 @@
   --border: #2c3442;
 }
 
-* { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden; /* ✅ 가로 스크롤 방지 */
+}
 
 body {
   margin: 0;
   font-family: Inter, system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
 }
 
 .topbar {
@@ -39,6 +56,7 @@ body {
   gap: 10px;
   align-items: center;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .top-left {
@@ -54,14 +72,16 @@ body {
 .top-left h1 {
   margin: 0;
   line-height: 1.2;
+  max-width: 100%;
 }
 
-/* ✅ promo links always one row */
+/* promo links always 1 row */
 .promo-links {
   width: 100%;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  min-width: 0;
 }
 
 .promo-link-btn {
@@ -70,14 +90,14 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: 34px;
   padding: 6px 8px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
   text-decoration: none;
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -87,12 +107,13 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .sort-mini select {
   height: 28px;
-  min-width: 92px;
-  padding: 2px 8px;
+  min-width: 84px;
+  padding: 2px 6px;
   font-size: 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -101,10 +122,13 @@ body {
 }
 
 .layout {
+  width: 100%;
+  max-width: 100%;
   display: grid;
   grid-template-columns: 1.4fr 1fr 1fr;
   gap: 12px;
   padding: 12px;
+  min-width: 0;
 }
 
 .panel {
@@ -113,15 +137,20 @@ body {
   border-radius: 14px;
   padding: 12px;
   min-height: 72vh;
+  min-width: 0; /* ✅ grid item overflow 방지 */
 }
 
 .row {
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
+  min-width: 0;
 }
 
-.panel-actions { margin-bottom: 0; }
+.panel-actions {
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
 
 .between {
   justify-content: space-between;
@@ -133,6 +162,7 @@ body {
   gap: 8px;
   max-height: 58vh;
   overflow: auto;
+  min-width: 0;
 }
 
 .recommend-empty {
@@ -150,45 +180,48 @@ body {
 .card {
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px;
+  padding: 8px;
   display: grid;
-  grid-template-columns: 56px 1fr auto;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .card img {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   object-fit: cover;
   border-radius: 8px;
 }
 
 #gamesList .card {
-  grid-template-columns: 50px 1fr auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
 }
 
 #gamesList .card img {
-  width: 50px;
-  height: 70px;
+  width: 46px;
+  height: 64px;
   aspect-ratio: 10 / 14;
   object-fit: contain;
   background: rgba(15, 23, 42, 0.04);
 }
 
-@media (pointer: fine) and (min-width: 1025px) {
-  #gamesList .card[data-game-id],
-  #recommendList .card[data-game-id] {
-    cursor: grab;
-  }
-
-  #gamesList .card[data-game-id]:active,
-  #recommendList .card[data-game-id]:active {
-    cursor: grabbing;
-  }
+.meta {
+  min-width: 0;
 }
 
-.meta small { color: var(--muted); }
+.meta > div,
+.meta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.meta small {
+  color: var(--muted);
+}
 
 .btn {
   border: 1px solid var(--accent);
@@ -196,8 +229,9 @@ body {
   color: white;
   border-radius: 8px;
   padding: 6px 10px;
-  min-height: 40px;
+  min-height: 34px;
   cursor: pointer;
+  max-width: 100%;
 }
 
 .btn.ghost {
@@ -334,6 +368,8 @@ body {
   justify-content: space-between;
   margin: 10px 0;
   font-size: 14px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .chips {
@@ -352,7 +388,7 @@ body {
 
 .grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
   margin-bottom: 10px;
 }
@@ -365,7 +401,9 @@ dialog {
   color: var(--text);
 }
 
-.compact .card { grid-template-columns: 1fr auto auto; }
+.compact .card {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
 
 .fly {
   position: fixed;
@@ -413,11 +451,13 @@ dialog {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+    padding: 10px 10px;
   }
 
   .top-controls {
     width: 100%;
     flex-wrap: wrap;
+    gap: 6px;
   }
 
   .top-left {
@@ -426,7 +466,12 @@ dialog {
     overflow: hidden;
   }
 
-  /* ✅ hard force: always one row */
+  .top-left h1 {
+    font-size: 42px;
+    max-width: 100%;
+  }
+
+  /* ✅ promo buttons always 1 row on mobile */
   .promo-links {
     width: 100%;
     display: grid !important;
@@ -437,46 +482,15 @@ dialog {
   .promo-link-btn {
     width: 100% !important;
     min-width: 0 !important;
-    min-height: 30px;
+    min-height: 28px;
     padding: 4px 2px !important;
-    font-size: 10px !important;
+    font-size: 9px !important;
     letter-spacing: -0.2px;
     line-height: 1.1;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
-
-  .row { flex-wrap: wrap; }
-  .row label { min-width: 140px; }
-
-  .stats {
-    flex-wrap: wrap;
-    gap: 8px 12px;
-  }
-
-  .card {
-    grid-template-columns: 48px 1fr auto;
-    padding: 8px;
-  }
-
-  .card img {
-    width: 48px;
-    height: 48px;
-  }
-
-  #gamesList .card { grid-template-columns: 42px 1fr auto; }
-
-  #gamesList .card img {
-    width: 42px;
-    height: 59px;
-  }
-
-  input, select, button { font-size: 16px; }
-}
-
-@media (max-width: 480px) {
-  body { padding-bottom: env(safe-area-inset-bottom); }
 
   .layout {
     padding: 8px;
@@ -488,7 +502,83 @@ dialog {
     border-radius: 10px;
   }
 
-  .box-placeholder { font-size: 18px; }
+  .row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .row label {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
+  .card {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .card img {
+    width: 44px;
+    height: 44px;
+  }
+
+  #gamesList .card {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+  }
+
+  #gamesList .card img {
+    width: 40px;
+    height: 56px;
+  }
+
+  .btn {
+    padding: 5px 8px;
+    min-height: 30px;
+    font-size: 12px;
+  }
+
+  /* ✅ 추천 카드 Add 버튼 잘림 방지 */
+  #recommendList .card .btn {
+    min-width: 40px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  input, select, button {
+    font-size: 14px;
+    max-width: 100%;
+  }
+
+  .box-placeholder {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .top-left h1 {
+    font-size: 28px;
+  }
+
+  .promo-link-btn {
+    font-size: 8px !important;
+    padding: 3px 1px !important;
+  }
+
+  .layout {
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .panel {
+    padding: 8px;
+    border-radius: 10px;
+  }
+
   .chips { gap: 4px; }
   .chip { font-size: 11px; }
 }
