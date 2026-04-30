@@ -405,8 +405,32 @@ function renderStaticText() {
   }
 }
 
+function normalizeUrl(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  return `https://${value}`;
+}
+
+function displayPromoName(name, url, index) {
+  const n = String(name || "").trim();
+  if (n) return n;
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return host || `Link ${index + 1}`;
+  } catch {
+    return `Link ${index + 1}`;
+  }
+}
+
 function renderPromoLinks() {
-  const links = (state.promoLinks || []).filter((x) => x?.name && x?.url);
+  const links = (state.promoLinks || [])
+    .slice(0, 3)
+    .map((item, index) => ({
+      name: displayPromoName(item?.name, normalizeUrl(item?.url), index),
+      url: normalizeUrl(item?.url),
+    }))
+    .filter((x) => x.url);
   el("promoLinks").innerHTML = links
     .map(
       (item) =>
@@ -972,12 +996,13 @@ function bind() {
   el("promoForm").addEventListener("submit", (e) => {
     e.preventDefault();
     state.promoLinks = [
-      { name: el("promoName1").value.trim(), url: el("promoUrl1").value.trim() },
-      { name: el("promoName2").value.trim(), url: el("promoUrl2").value.trim() },
-      { name: el("promoName3").value.trim(), url: el("promoUrl3").value.trim() },
+      { name: el("promoName1").value.trim(), url: normalizeUrl(el("promoUrl1").value) },
+      { name: el("promoName2").value.trim(), url: normalizeUrl(el("promoUrl2").value) },
+      { name: el("promoName3").value.trim(), url: normalizeUrl(el("promoUrl3").value) },
     ];
     persist();
     render();
+    alert("홍보 버튼이 저장되었습니다.");
   });
 }
 
