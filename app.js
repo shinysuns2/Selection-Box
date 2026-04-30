@@ -40,6 +40,8 @@ const i18n = {
     dragHintTouch: "게임 카드의 '담기' 버튼으로 박스에 추가할 수 있어요.",
     cancel: "취소",
     login: "로그인",
+    sort_abc: "ABC순",
+    sort_thickness: "두께순",
   },
   en: {
     appTitle: "Selection Box Planner",
@@ -76,6 +78,8 @@ const i18n = {
     dragHintTouch: "Use the Add button on each game card to place it in the box.",
     cancel: "Cancel",
     login: "Login",
+    sort_abc: "A–Z",
+    sort_thickness: "Thickness",
   },
   ja: {
     appTitle: "Selection Box Planner",
@@ -112,6 +116,8 @@ const i18n = {
     dragHintTouch: "各ゲームカードの追加ボタンでボックスに入れられます。",
     cancel: "キャンセル",
     login: "ログイン",
+    sort_abc: "あいうえお順",
+    sort_thickness: "厚み順",
   },
 };
 
@@ -406,6 +412,12 @@ function renderStaticText() {
     diffOpts[0].textContent = text("diff_beginner");
     diffOpts[1].textContent = text("diff_intermediate");
     diffOpts[2].textContent = text("diff_advanced");
+  }
+
+  const sortSel = el("sortSelect");
+  if (sortSel?.options?.length >= 2) {
+    sortSel.options[0].textContent = text("sort_abc");
+    sortSel.options[1].textContent = text("sort_thickness");
   }
 }
 
