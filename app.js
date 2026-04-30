@@ -126,7 +126,6 @@ const defaultState = {
   selectedPlayers: "all",
   selectedDifficulty: "all",
   sortBy: "abc",
-  checkedCategoryIds: [],
   boxes: [{ id: "b1", name: { ko: "기본 박스", en: "Default Box", ja: "基本ボックス" }, lengthCm: 29, imageUrl: "" }],
   categories: [
     { id: "c1", name: { ko: "트릭테이킹", en: "Trick-taking", ja: "トリックテイキング" } },
@@ -169,18 +168,11 @@ const defaultState = {
 };
 
 let state = loadState();
+let editingBoxId = null;
+let editingGameId = null;
 let draggingGameId = null;
-const el = (id) => document.getElementById(id);
 
-function dedupeCategories(list) {
-  const seen = new Set();
-  return (list || []).filter((c) => {
-    const key = String(c.id || "").trim() || `${c.name?.en || ""}|${c.name?.ko || ""}|${c.name?.ja || ""}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
+const el = (id) => document.getElementById(id);
 
 function loadState() {
   try {
@@ -197,9 +189,7 @@ function loadState() {
     loaded.selectedPlayers ||= "all";
     loaded.selectedDifficulty ||= "all";
     loaded.sortBy ||= "abc";
-    loaded.checkedCategoryIds ||= [];
     loaded.promoLinks = (loaded.promoLinks || defaultState.promoLinks).slice(0, 3);
-    loaded.categories = dedupeCategories(loaded.categories || []);
     return loaded;
   } catch {
     return structuredClone(defaultState);
@@ -218,7 +208,6 @@ function persist() {
       selectedDifficulty: state.selectedDifficulty,
       sortBy: state.sortBy,
       selectedGameIds: state.selectedGameIds,
-      checkedCategoryIds: state.checkedCategoryIds,
     })
   );
 }
@@ -236,11 +225,23 @@ async function fetchPromoLinks() {
   state.promoLinks = links.slice(0, 3);
 }
 
+async function savePromoLinksShared(links) {
+  const { error: deactivateError } = await supabaseClient.from("promo_links").update({ is_active: false }).eq("is_active", true);
+  if (deactivateError) throw deactivateError;
+  const payload = links
+    .map((it, idx) => ({ name: String(it.name || "").trim(), url: String(it.url || "").trim(), position: idx + 1, is_active: !!String(it.url || "").trim() }))
+    .filter((r) => r.url);
+  if (!payload.length) return;
+  const { error: insertError } = await supabaseClient.from("promo_links").insert(payload);
+  if (insertError) throw insertError;
+}
+
 function text(key) { return i18n[state.lang]?.[key] ?? i18n.ko[key] ?? key; }
 function nameOf(item) { return item?.name?.[state.lang] || item?.name?.ko || "-"; }
 function difficultyTier(v) { const n = Number(v || 0); if (n <= 1) return "beginner"; if (n === 2) return "intermediate"; return "advanced"; }
 function difficultyLabel(v) { return text(`diff_${difficultyTier(v)}`); }
 function normalizeUrl(raw) { const v = String(raw || "").trim(); if (!v) return ""; return /^https?:\/\//i.test(v) ? v : `https://${v}`; }
+function isUuid(v) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || "")); }
 
 function raiseIfError(error, fallback) {
   if (!error) return;
@@ -259,9 +260,7 @@ async function fetchSharedData() {
   raiseIfError(gameRes.error, "게임 로딩 실패");
 
   if (catRes.data?.length) {
-    state.categories = dedupeCategories(
-      catRes.data.map((c) => ({ id: c.id, name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja } }))
-    );
+    state.categories = catRes.data.map((c) => ({ id: c.id, name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja } }));
   }
   if (boxRes.data?.length) {
     state.boxes = boxRes.data.map((b) => ({ id: b.id, name: { ko: b.name_ko, en: b.name_en, ja: b.name_ja }, lengthCm: Number(b.length_cm), imageUrl: b.image_url || "" }));
@@ -282,7 +281,6 @@ async function fetchSharedData() {
 
   if (!state.boxes.find((b) => b.id === state.selectedBoxId)) state.selectedBoxId = state.boxes[0]?.id || "b1";
   state.selectedGameIds = state.selectedGameIds.filter((id) => state.games.some((g) => g.id === id));
-
   await fetchPromoLinks();
   persist();
 }
@@ -294,35 +292,19 @@ function canFitGame(game) { return Number(game.lengthCm) <= selectedBox().length
 
 function renderStaticText() {
   ["appTitle","gamesTitle","boxLabel","categoryLabel","selectedTitle","playersLabel","difficultyLabel","usedLabel","remainingLabel","fillLabel","recommendTitle","adminLoginTitle","adminPanelTitle","manageBoxTitle","manageGameTitle","promoTitle"]
-    .forEach((k) => { const n = el(k); if (n) n.textContent = text(k); });
-
-  if (el("cancelBtn")) el("cancelBtn").textContent = text("cancel");
-  if (el("loginBtn")) el("loginBtn").textContent = text("login");
-  if (el("resetFiltersBtn")) el("resetFiltersBtn").textContent = text("resetFilters");
-  if (el("exportImageBtn")) el("exportImageBtn").textContent = text("exportImage");
-  if (el("resetSelectionBtn")) el("resetSelectionBtn").textContent = text("resetSelection");
-
+    .forEach((k) => (el(k).textContent = text(k)));
+  el("cancelBtn").textContent = text("cancel");
+  el("loginBtn").textContent = text("login");
+  el("resetFiltersBtn").textContent = text("resetFilters");
+  el("exportImageBtn").textContent = text("exportImage");
+  el("resetSelectionBtn").textContent = text("resetSelection");
+  const dragHintEl = el("dragHint");
+  if (dragHintEl) dragHintEl.textContent = text(window.matchMedia("(pointer: fine) and (min-width: 1025px)").matches ? "dragHintDesktop" : "dragHintTouch");
   const sortSel = el("sortSelect");
   if (sortSel?.options?.length >= 2) {
     sortSel.options[0].textContent = text("sort_abc");
     sortSel.options[1].textContent = text("sort_thickness");
   }
-
-  const hint = el("dragHint");
-  if (hint) hint.textContent = text(window.matchMedia("(pointer: fine) and (min-width: 1025px)").matches ? "dragHintDesktop" : "dragHintTouch");
-}
-
-function renderCategoryChecks() {
-  const wrap = el("categoryChecks");
-  if (!wrap) return;
-  const categories = dedupeCategories(state.categories);
-
-  wrap.innerHTML = categories.map((c) => `
-    <label class="check-item">
-      <input type="checkbox" data-cat-check="${c.id}" ${state.checkedCategoryIds.includes(c.id) ? "checked" : ""} />
-      <span>${nameOf(c)}</span>
-    </label>
-  `).join("");
 }
 
 function renderPromoLinks() {
@@ -336,73 +318,50 @@ function renderPromoLinks() {
     return { name, url, enabled: !!url };
   });
 
-  const target = el("promoLinks");
-  if (!target) return;
-  target.innerHTML = links.map((it) =>
+  el("promoLinks").innerHTML = links.map((it) =>
     it.enabled
       ? `<a class="promo-link-btn" href="${it.url}" target="_blank" rel="noopener noreferrer">${it.name}</a>`
       : `<a class="promo-link-btn" href="#" aria-disabled="true" style="opacity:.5;pointer-events:none;">${it.name}</a>`
   ).join("");
+
+  const raw = state.promoLinks || [];
+  if (el("promoName1")) el("promoName1").value = raw[0]?.name || "";
+  if (el("promoUrl1")) el("promoUrl1").value = raw[0]?.url || "";
+  if (el("promoName2")) el("promoName2").value = raw[1]?.name || "";
+  if (el("promoUrl2")) el("promoUrl2").value = raw[1]?.url || "";
+  if (el("promoName3")) el("promoName3").value = raw[2]?.name || "";
+  if (el("promoUrl3")) el("promoUrl3").value = raw[2]?.url || "";
 }
 
 function renderSelectors() {
-  const boxSelect = el("boxSelect");
-  if (boxSelect) {
-    boxSelect.innerHTML = state.boxes.map((b) => `<option value="${b.id}">${nameOf(b)} (${b.lengthCm}cm)</option>`).join("");
-    boxSelect.value = selectedBox().id;
-  }
+  el("boxSelect").innerHTML = state.boxes.map((b) => `<option value="${b.id}">${nameOf(b)} (${b.lengthCm}cm)</option>`).join("");
+  el("boxSelect").value = selectedBox().id;
 
-  const playersSelect = el("playersSelect");
-  if (playersSelect) {
-    playersSelect.innerHTML = [`<option value="all">${text("allPlayers")}</option>`,`<option value="1">1</option>`,`<option value="2">2</option>`,`<option value="3">3</option>`,`<option value="4">4</option>`,`<option value="5">5</option>`,`<option value="6plus">6+</option>`].join("");
-    playersSelect.value = state.selectedPlayers;
-  }
+  el("categorySelect").innerHTML = [`<option value="all">${text("all")}</option>`, ...state.categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`)].join("");
+  el("categorySelect").value = state.selectedCategory;
 
-  const diffSelect = el("difficultySelect");
-  if (diffSelect) {
-    diffSelect.innerHTML = [`<option value="all">${text("allDifficulty")}</option>`,`<option value="beginner">${text("diff_beginner")}</option>`,`<option value="intermediate">${text("diff_intermediate")}</option>`,`<option value="advanced">${text("diff_advanced")}</option>`].join("");
-    diffSelect.value = state.selectedDifficulty;
-  }
+  el("playersSelect").innerHTML = [`<option value="all">${text("allPlayers")}</option>`,`<option value="1">1</option>`,`<option value="2">2</option>`,`<option value="3">3</option>`,`<option value="4">4</option>`,`<option value="5">5</option>`,`<option value="6plus">6+</option>`].join("");
+  el("playersSelect").value = state.selectedPlayers;
 
-  const gameCategory = el("gameCategory");
-  if (gameCategory) gameCategory.innerHTML = dedupeCategories(state.categories).map((c) => `<option value="${c.id}">${nameOf(c)}</option>`).join("");
+  el("difficultySelect").innerHTML = [`<option value="all">${text("allDifficulty")}</option>`,`<option value="beginner">${text("diff_beginner")}</option>`,`<option value="intermediate">${text("diff_intermediate")}</option>`,`<option value="advanced">${text("diff_advanced")}</option>`].join("");
+  el("difficultySelect").value = state.selectedDifficulty;
 
-  renderCategoryChecks();
+  el("gameCategory").innerHTML = state.categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`).join("");
 }
 
 function renderGames() {
-  const q = el("searchInput")?.value?.trim().toLowerCase() || "";
-
+  const q = el("searchInput").value?.trim().toLowerCase() || "";
   const list = state.games.filter((g) => {
-    const playersOk =
-      state.selectedPlayers === "all" ||
-      (state.selectedPlayers === "6plus"
-        ? Number(g.playersMax) >= 6
-        : Number(g.playersMin) <= Number(state.selectedPlayers) && Number(state.selectedPlayers) <= Number(g.playersMax));
-
+    const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
+    const playersOk = state.selectedPlayers === "all" || (state.selectedPlayers === "6plus" ? Number(g.playersMax) >= 6 : Number(g.playersMin) <= Number(state.selectedPlayers) && Number(state.selectedPlayers) <= Number(g.playersMax));
     const difficultyOk = state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
     const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
-    const fitOk = canFitGame(g);
-
-    // ✅ category OR
-    const categoryOrOk =
-      state.checkedCategoryIds.length === 0 ||
-      state.checkedCategoryIds.includes(g.categoryId);
-
-    return playersOk && difficultyOk && nameOk && fitOk && categoryOrOk;
+    return categoryOk && playersOk && difficultyOk && nameOk && canFitGame(g);
   });
 
-  list.sort((a, b) => {
-    if (state.sortBy === "thickness") {
-      const d = Number(a.lengthCm) - Number(b.lengthCm);
-      if (d !== 0) return d;
-    }
-    return nameOf(a).localeCompare(nameOf(b), undefined, { sensitivity: "base" });
-  });
+  list.sort((a, b) => (state.sortBy === "thickness" ? Number(a.lengthCm) - Number(b.lengthCm) : 0) || nameOf(a).localeCompare(nameOf(b), undefined, { sensitivity: "base" }));
 
-  const listEl = el("gamesList");
-  if (!listEl) return;
-  listEl.innerHTML = list.map((g) => `<article class="card" data-game-id="${g.id}" draggable="true">
+  el("gamesList").innerHTML = list.map((g) => `<article class="card" data-game-id="${g.id}" draggable="true">
     <img src="${g.imageUrl}" alt="${nameOf(g)}" loading="lazy" decoding="async" />
     <div class="meta">
       <div>${nameOf(g)}</div>
@@ -420,33 +379,24 @@ function renderBox() {
   const hasImage = !!box.imageUrl;
   const hasSelected = selectedGames().length > 0;
 
-  if (el("boxImage")) {
-    el("boxImage").style.display = hasImage ? "block" : "none";
-    if (hasImage) el("boxImage").src = box.imageUrl;
-  }
-  if (el("boxPlaceholder")) el("boxPlaceholder").style.display = hasImage || hasSelected ? "none" : "flex";
+  el("boxImage").style.display = hasImage ? "block" : "none";
+  el("boxPlaceholder").style.display = hasImage || hasSelected ? "none" : "flex";
+  if (hasImage) el("boxImage").src = box.imageUrl;
 
-  if (el("usedValue")) el("usedValue").textContent = `${used.toFixed(1)}cm / ${box.lengthCm}cm`;
-  if (el("remainingValue")) el("remainingValue").textContent = `${remain.toFixed(1)}cm`;
-  if (el("fillValue")) el("fillValue").textContent = `${fill.toFixed(0)}%`;
+  el("usedValue").textContent = `${used.toFixed(1)}cm / ${box.lengthCm}cm`;
+  el("remainingValue").textContent = `${remain.toFixed(1)}cm`;
+  el("fillValue").textContent = `${fill.toFixed(0)}%`;
+  el("progressBar").style.width = `${fill}%`;
+  el("progressBar").style.background = remain < 0 ? "#ef4444" : "linear-gradient(90deg,#5a67d8,#6aa6ff)";
 
-  if (el("progressBar")) {
-    el("progressBar").style.width = `${fill}%`;
-    el("progressBar").style.background = remain < 0 ? "#ef4444" : "linear-gradient(90deg,#5a67d8,#6aa6ff)";
-  }
-
-  if (el("selectedList")) {
-    el("selectedList").innerHTML = selectedGames().map((g, i) => `<span class="chip">${nameOf(g)} (${g.lengthCm}cm) <button data-remove-idx="${i}">×</button></span>`).join("");
-  }
+  el("selectedList").innerHTML = selectedGames().map((g, i) => `<span class="chip">${nameOf(g)} (${g.lengthCm}cm) <button data-remove-idx="${i}">×</button></span>`).join("");
 
   const filledHtml = selectedGames().map((g) => {
     const widthPct = (Number(g.lengthCm) / box.lengthCm) * 100;
     return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${g.boxImageUrl || g.imageUrl}')"></figure>`;
   }).join("");
   const emptyPct = Math.max(0, (remain / box.lengthCm) * 100);
-  if (el("dropZone")) {
-    el("dropZone").innerHTML = `${filledHtml}${emptyPct > 0.01 ? `<div class="empty-slot" style="width:${emptyPct}%; flex:0 0 ${emptyPct}%"></div>` : ""}`;
-  }
+  el("dropZone").innerHTML = `${filledHtml}${emptyPct > 0.01 ? `<div class="empty-slot" style="width:${emptyPct}%; flex:0 0 ${emptyPct}%"></div>` : ""}`;
 }
 
 function recommendGames() {
@@ -469,40 +419,63 @@ function recommendGames() {
       return { game: g, totalScore: difficultyScore + mechanismScore + playerScore, fitGap: Math.max(0, remain - Number(g.lengthCm)) };
     })
     .sort((a, b) => b.totalScore - a.totalScore || a.fitGap - b.fitGap)
-    .slice(0, 3);
+    .slice(0, 3); // 강제 3개
 }
 
 function renderRecommend() {
-  const target = el("recommendList");
-  if (!target) return;
   if (!selectedBox() || selectedGames().length === 0) {
-    target.innerHTML = `<p class="recommend-empty">${text("noRecommend")}</p>`;
+    el("recommendList").innerHTML = `<p class="recommend-empty">${text("noRecommend")}</p>`;
     return;
   }
   const items = recommendGames();
   if (!items.length) {
-    target.innerHTML = `<p class="recommend-empty">${text("noRecommend")}</p>`;
+    el("recommendList").innerHTML = `<p class="recommend-empty">${text("noRecommend")}</p>`;
     return;
   }
-  target.innerHTML = items.map(({ game }) => `<article class="card" data-game-id="${game.id}" draggable="true">
+  el("recommendList").innerHTML = items.map(({ game }) => `<article class="card" data-game-id="${game.id}" draggable="true">
     <img src="${game.imageUrl}" alt="${nameOf(game)}" loading="lazy" decoding="async" />
     <div class="meta"><div>${nameOf(game)}</div></div>
     <button class="btn add-btn" data-id="${game.id}">${text("add")}</button>
   </article>`).join("");
 }
 
-function addGame(id) {
+function renderAdminLists() {
+  el("boxAdminList").innerHTML = state.boxes.map((b) => `<article class="card"><div>${nameOf(b)} (${b.lengthCm}cm)</div><button class="btn ghost" data-edit-box="${b.id}">수정</button><button class="btn ghost" data-del-box="${b.id}">삭제</button></article>`).join("");
+  el("gameAdminList").innerHTML = state.games.map((g) => `<article class="card"><div>${nameOf(g)} (${g.lengthCm}cm · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)})</div><button class="btn ghost" data-edit-game="${g.id}">수정</button><button class="btn ghost" data-del-game="${g.id}">삭제</button></article>`).join("");
+}
+
+function animateToBox(imgSrc, fromEl) {
+  const fly = document.createElement("img");
+  fly.src = imgSrc;
+  fly.className = "fly";
+  document.body.appendChild(fly);
+  const from = fromEl.getBoundingClientRect();
+  const to = el("dropZone").getBoundingClientRect();
+  const boxVisual = el("boxVisual");
+  fly.style.left = `${from.left}px`; fly.style.top = `${from.top}px`;
+  fly.style.width = `${from.width || 52}px`; fly.style.height = `${from.height || 52}px`;
+  requestAnimationFrame(() => {
+    fly.style.transform = `translate(${to.left - from.left + 8}px, ${to.top - from.top + 8}px) scale(0.9)`;
+    fly.style.opacity = "0.12";
+  });
+  setTimeout(() => boxVisual.classList.add("box-hit"), 235);
+  setTimeout(() => boxVisual.classList.remove("box-hit"), 470);
+  setTimeout(() => fly.remove(), 360);
+}
+
+function addGame(id, sourceEl) {
   const game = state.games.find((g) => g.id === id);
   if (!game) return;
   if (!canFitGame(game)) return alert(text("overflowMsg"));
   state.selectedGameIds.push(id);
+  if (sourceEl) animateToBox(game.imageUrl, sourceEl);
   persist();
   render();
 }
 
 function render() {
   document.documentElement.classList.toggle("dark", state.dark);
-  if (el("languageSelect")) el("languageSelect").value = state.lang;
+  el("languageSelect").value = state.lang;
   if (el("sortSelect")) el("sortSelect").value = state.sortBy || "abc";
   renderStaticText();
   renderSelectors();
@@ -510,63 +483,138 @@ function render() {
   renderBox();
   renderRecommend();
   renderPromoLinks();
-}
-
-function toggleInArray(arr, value, checked) {
-  const set = new Set(arr);
-  if (checked) set.add(value); else set.delete(value);
-  return [...set];
+  renderAdminLists();
 }
 
 function bind() {
   let searchTimer = null;
+  const desktopDrag = window.matchMedia("(pointer: fine) and (min-width: 1025px)").matches;
 
-  el("languageSelect")?.addEventListener("change", (e) => { state.lang = e.target.value; persist(); render(); });
-  el("themeToggle")?.addEventListener("click", () => { state.dark = !state.dark; persist(); render(); });
+  el("languageSelect").addEventListener("change", (e) => { state.lang = e.target.value; persist(); render(); });
+  el("themeToggle").addEventListener("click", () => { state.dark = !state.dark; persist(); render(); });
   el("sortSelect")?.addEventListener("change", (e) => { state.sortBy = e.target.value || "abc"; persist(); renderGames(); });
-  el("boxSelect")?.addEventListener("change", (e) => { state.selectedBoxId = e.target.value; state.selectedGameIds = []; persist(); render(); });
-  el("playersSelect")?.addEventListener("change", (e) => { state.selectedPlayers = e.target.value; persist(); renderGames(); });
-  el("difficultySelect")?.addEventListener("change", (e) => { state.selectedDifficulty = e.target.value; persist(); renderGames(); });
+  el("boxSelect").addEventListener("change", (e) => { state.selectedBoxId = e.target.value; state.selectedGameIds = []; persist(); render(); });
+  el("categorySelect").addEventListener("change", (e) => { state.selectedCategory = e.target.value; persist(); renderGames(); });
+  el("playersSelect").addEventListener("change", (e) => { state.selectedPlayers = e.target.value; persist(); renderGames(); });
+  el("difficultySelect").addEventListener("change", (e) => { state.selectedDifficulty = e.target.value; persist(); renderGames(); });
 
-  document.body.addEventListener("change", (e) => {
-    const cat = e.target.closest("[data-cat-check]");
-    if (!cat) return;
-    state.checkedCategoryIds = toggleInArray(state.checkedCategoryIds, cat.getAttribute("data-cat-check"), cat.checked);
-    persist();
-    renderGames();
-  });
-
-  el("searchInput")?.addEventListener("input", () => {
+  el("searchInput").addEventListener("input", () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => renderGames(), 120);
   });
 
-  el("resetFiltersBtn")?.addEventListener("click", () => {
-    if (el("searchInput")) el("searchInput").value = "";
+  el("resetFiltersBtn").addEventListener("click", () => {
+    el("searchInput").value = "";
+    state.selectedCategory = "all";
     state.selectedPlayers = "all";
     state.selectedDifficulty = "all";
-    state.checkedCategoryIds = [];
     persist();
     render();
   });
 
-  el("resetSelectionBtn")?.addEventListener("click", () => { state.selectedGameIds = []; persist(); render(); });
+  el("resetSelectionBtn").addEventListener("click", () => { state.selectedGameIds = []; persist(); render(); });
 
-  document.body.addEventListener("click", (e) => {
+  if (desktopDrag) {
+    document.body.addEventListener("dragstart", (e) => {
+      const card = e.target.closest(".card[data-game-id]");
+      if (!card) return;
+      draggingGameId = card.dataset.gameId;
+      e.dataTransfer?.setData("text/plain", draggingGameId || "");
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = "copy";
+      el("boxVisual")?.classList.add("box-hit");
+    });
+    document.body.addEventListener("dragend", () => {
+      draggingGameId = null;
+      el("boxVisual")?.classList.remove("box-hit");
+    });
+    const onDrop = (e) => {
+      e.preventDefault();
+      const droppedId = e.dataTransfer?.getData("text/plain") || draggingGameId;
+      if (!droppedId) return;
+      addGame(droppedId);
+      draggingGameId = null;
+      el("boxVisual")?.classList.remove("box-hit");
+    };
+    el("exportBoxArea")?.addEventListener("dragover", (e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = "copy"; });
+    el("exportBoxArea")?.addEventListener("drop", onDrop);
+  }
+
+  document.body.addEventListener("click", async (e) => {
     const addBtn = e.target.closest(".add-btn");
-    if (addBtn) { addGame(addBtn.dataset.id); return; }
+    if (addBtn) {
+      const card = addBtn.closest(".card");
+      addGame(addBtn.dataset.id, card?.querySelector("img") || addBtn);
+      return;
+    }
 
     const rm = e.target.closest("[data-remove-idx]");
     if (rm) {
       state.selectedGameIds.splice(Number(rm.dataset.removeIdx), 1);
       persist();
       render();
+      return;
+    }
+
+    const delBox = e.target.closest("[data-del-box]");
+    if (delBox) {
+      const { error } = await supabaseClient.from("boxes").delete().eq("id", delBox.dataset.delBox);
+      raiseIfError(error, "박스 삭제 실패");
+      await fetchSharedData();
+      state.selectedBoxId = state.boxes[0]?.id || "b1";
+      persist();
+      render();
+      return;
+    }
+
+    const delGame = e.target.closest("[data-del-game]");
+    if (delGame) {
+      const { error } = await supabaseClient.from("games").delete().eq("id", delGame.dataset.delGame);
+      raiseIfError(error, "게임 삭제 실패");
+      await fetchSharedData();
+      persist();
+      render();
+      return;
     }
   });
 
   const dialog = el("adminDialog");
-  el("adminBtn")?.addEventListener("click", () => dialog?.showModal());
-  el("cancelBtn")?.addEventListener("click", (e) => { e.preventDefault(); dialog?.close("cancel"); });
+  el("adminBtn").addEventListener("click", () => dialog.showModal());
+  el("cancelBtn")?.addEventListener("click", (e) => { e.preventDefault(); dialog.close("cancel"); });
+
+  el("adminLoginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const { error } = await supabaseClient.auth.signInWithPassword({ email: ADMIN_EMAIL, password: el("adminPassword").value });
+    if (!error) {
+      el("adminPanel").hidden = false;
+      el("adminLoginForm").hidden = true;
+    } else {
+      alert(`로그인 실패: ${error.message || "어드민 비밀번호를 확인해주세요."}`);
+    }
+  });
+
+  el("logoutBtn").addEventListener("click", async () => {
+    await supabaseClient.auth.signOut();
+    el("adminPanel").hidden = true;
+    el("adminLoginForm").hidden = false;
+    el("adminPassword").value = "";
+  });
+
+  el("promoForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const links = [
+      { name: el("promoName1").value.trim(), url: normalizeUrl(el("promoUrl1").value) },
+      { name: el("promoName2").value.trim(), url: normalizeUrl(el("promoUrl2").value) },
+      { name: el("promoName3").value.trim(), url: normalizeUrl(el("promoUrl3").value) },
+    ];
+    try {
+      await savePromoLinksShared(links);
+      await fetchPromoLinks();
+      render();
+      alert("홍보 버튼이 저장되었습니다. (모든 사용자에게 반영)");
+    } catch (error) {
+      alert(`홍보 버튼 저장 실패\n${error.message || error}`);
+    }
+  });
 }
 
 async function init() {
@@ -575,4 +623,5 @@ async function init() {
   try { await fetchSharedData(); } catch (error) { console.warn("Shared data fetch failed, using local/default data.", error); }
   render();
 }
+
 init();
