@@ -181,6 +181,7 @@ let state = loadState();
 let editingBoxId = null;
 let editingGameId = null;
 let gamesRenderCount = Number.MAX_SAFE_INTEGER;
+let draggingGameId = null;
 
 const el = (id) => document.getElementById(id);
 
@@ -445,7 +446,7 @@ function renderGames() {
 
   el("gamesList").innerHTML = list
     .map(
-      (g) => `<article class="card" data-game-id="${g.id}">
+      (g) => `<article class="card" data-game-id="${g.id}" draggable="true">
         <img src="${g.imageUrl}" alt="${nameOf(g)}" loading="lazy" decoding="async" />
         <div class="meta">
           <div>${nameOf(g)}</div>
@@ -547,7 +548,7 @@ function renderRecommend() {
     return;
   }
   el("recommendList").innerHTML = items
-    .map(({ game }) => `<article class="card">
+    .map(({ game }) => `<article class="card" data-game-id="${game.id}" draggable="true">
       <img src="${game.imageUrl}" alt="${nameOf(game)}" loading="lazy" decoding="async" />
       <div class="meta">
         <div>${nameOf(game)}</div>
@@ -631,6 +632,7 @@ function render() {
 
 function bind() {
   let searchTimer = null;
+  const desktopDragEnabled = window.matchMedia("(pointer: fine) and (min-width: 1025px)").matches;
 
   const resetGamePaging = () => {};
 
@@ -728,6 +730,36 @@ function bind() {
       btn.textContent = prev;
     }
   });
+
+  if (desktopDragEnabled) {
+    document.body.addEventListener("dragstart", (e) => {
+      const card = e.target.closest(".card[data-game-id]");
+      if (!card) return;
+      draggingGameId = card.dataset.gameId;
+      e.dataTransfer?.setData("text/plain", draggingGameId || "");
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = "copy";
+      el("boxVisual")?.classList.add("box-hit");
+    });
+
+    document.body.addEventListener("dragend", () => {
+      draggingGameId = null;
+      el("boxVisual")?.classList.remove("box-hit");
+    });
+
+    const dropZone = el("dropZone");
+    dropZone?.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    });
+    dropZone?.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const droppedId = e.dataTransfer?.getData("text/plain") || draggingGameId;
+      if (!droppedId) return;
+      addGame(droppedId);
+      draggingGameId = null;
+      el("boxVisual")?.classList.remove("box-hit");
+    });
+  }
 
   document.body.addEventListener("click", async (e) => {
     const addBtn = e.target.closest(".add-btn");
