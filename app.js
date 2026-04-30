@@ -338,7 +338,7 @@ async function fetchSharedData() {
       deduped.push({ id: "c11-misc", name: { ko: "기타", en: "Other / Misc", ja: "その他" } });
     }
     state.categories = deduped;
-  }  }
+  }
   if (boxes?.length) {
     state.boxes = boxes.map((b) => ({
       id: b.id,
@@ -542,7 +542,7 @@ function recommendGames() {
     .filter((g) => remain >= Number(g.lengthCm))
     .map((g) => {
       const remainAfter = remain - Number(g.lengthCm);
-      const fitGap = Math.max(0, remainAfter); // 두께 조건 통과 후 tie-break
+      const fitGap = Math.max(0, remainAfter);
 
       const hasPicked = picked.length > 0;
       const difficultyScore = !hasPicked ? 0 : pickedDifficultyTiers.has(difficultyTier(g.difficulty)) ? 50 : 25;
@@ -565,10 +565,7 @@ function recommendGames() {
         playerScore,
       };
     })
-    .sort((a, b) =>
-      b.totalScore - a.totalScore ||
-      a.fitGap - b.fitGap
-    )
+    .sort((a, b) => b.totalScore - a.totalScore || a.fitGap - b.fitGap)
     .slice(0, 5);
 }
 
@@ -670,14 +667,15 @@ function render() {
 function bind() {
   let searchTimer = null;
   const desktopDragEnabled = window.matchMedia("(pointer: fine) and (min-width: 1025px)").matches;
-
   const resetGamePaging = () => {};
 
   el("languageSelect").addEventListener("change", (e) => {
     state.lang = e.target.value;
     persist();
     render();
-  });  el("themeToggle").addEventListener("click", () => {
+  });
+
+  el("themeToggle").addEventListener("click", () => {
     state.dark = !state.dark;
     persist();
     render();
@@ -985,7 +983,12 @@ function bind() {
 
 async function init() {
   bind();
-  await fetchSharedData();
+  render(); // show local defaults immediately
+  try {
+    await fetchSharedData();
+  } catch (error) {
+    console.warn("Shared data fetch failed, using local/default data.", error);
+  }
   render();
 }
 
