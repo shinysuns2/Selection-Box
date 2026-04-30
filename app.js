@@ -663,22 +663,29 @@ function bind() {
 
   el("gameForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
+
+    const existing = state.games.find((x) => x.id === editingGameId);
+    const listInput = el("gameImageUrl").value.trim();
+    const boxInput = el("gameBoxImageUrl").value.trim();
+
     const payload = {
       name_ko: el("gameNameKo").value.trim(),
       name_en: el("gameNameEn").value.trim(),
       name_ja: el("gameNameJa").value.trim(),
       length_cm: Number(el("gameLength").value),
-      image_url: el("gameImageUrl").value.trim() || "",
-      box_image_url: el("gameBoxImageUrl").value.trim() || "",
+      image_url: listInput || existing?.imageUrl || "",
+      box_image_url: boxInput || existing?.boxImageUrl || listInput || existing?.imageUrl || "",
       players_min: Number(el("gamePlayersMin").value),
       players_max: Number(el("gamePlayersMax").value),
       difficulty: Number(el("gameDifficulty").value),
       category_id: el("gameCategory").value,
       is_active: true,
     };
+
     const { error } = editingGameId
       ? await supabaseClient.from("games").update(payload).eq("id", editingGameId)
       : await supabaseClient.from("games").insert(payload);
+
     raiseIfError(error, "게임 저장 실패");
     editingGameId = null;
     e.target.reset();
