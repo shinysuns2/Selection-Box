@@ -239,9 +239,67 @@ function persist() {
       selectedDifficulty: state.selectedDifficulty,
       sortBy: state.sortBy,
       selectedGameIds: state.selectedGameIds,
-      promoLinks: state.promoLinks,
+      // promoLinks는 이제 Supabase 공유 데이터로 관리
     })
   );
+}
+
+async function fetchPromoLinks() {
+  const { data, error } = await supabaseClient
+    .from("promo_links")
+    .select("*")
+    .eq("is_active", true)
+    .order("position", { ascending: true })
+    .limit(3);
+
+  if (error) {
+    console.warn("Promo links fetch failed:", error.message);
+    return;
+  }
+
+  const links = (data || []).map((row) => ({
+    id: row.id,
+    name: row.name || "",
+    url: row.url || "",
+    position: Number(row.position ?? 1),
+  }));
+
+  while (links.length < 3) {
+    links.push({ name: "", url: "" });
+  }
+
+  state.promoLinks = links.slice(0, 3);
+  persist();
+}
+
+async function savePromoLinksShared(links) {
+  // 기존 active 링크 비활성화
+  const { error: deactivateError } = await supabaseClient
+    .from("promo_links")
+    .update({ is_active: false })
+    .eq("is_active", true);
+
+  if (deactivateError) {
+    throw deactivateError;
+  }
+
+  const payload = links
+    .map((item, index) => ({
+      name: String(item.name || "").trim(),
+      url: String(item.url || "").trim(),
+      position: index + 1,
+      is_active: Boolean(String(item.url || "").trim()),
+    }))
+    .filter((row) => row.url);
+
+  if (!payload.length) {
+    return;
+  }
+
+  const { error: insertError } = await supabaseClient.from("promo_links").insert(payload);
+  if (insertError) {
+    throw insertError;
+  }
 }
 
 function fileToDataUrl(file) {
@@ -374,6 +432,8 @@ async function fetchSharedData() {
     state.selectedBoxId = state.boxes[0]?.id || defaultState.selectedBoxId;
   }
   state.selectedGameIds = state.selectedGameIds.filter((id) => state.games.some((g) => g.id === id));
+
+  await fetchPromoLinks();
   persist();
 }
 
@@ -1009,16 +1069,23 @@ function bind() {
     render();
   });
 
-  el("promoForm").addEventListener("submit", (e) => {
+  el("promoForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    state.promoLinks = [
+
+    const links = [
       { name: el("promoName1").value.trim(), url: normalizeUrl(el("promoUrl1").value) },
       { name: el("promoName2").value.trim(), url: normalizeUrl(el("promoUrl2").value) },
       { name: el("promoName3").value.trim(), url: normalizeUrl(el("promoUrl3").value) },
     ];
-    persist();
-    render();
-    alert("홍보 버튼이 저장되었습니다.");
+
+    try {
+      await savePromoLinksShared(links);
+      await fetchPromoLinks();
+      render();
+      alert("홍보 버튼이 저장되었습니다. (모든 사용자에게 반영)");
+    } catch (error) {
+      alert(`홍보 버튼 저장 실패\n${error.message || error}`);
+    }
   });
 }
 
