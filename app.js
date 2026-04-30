@@ -263,8 +263,8 @@ function nameOf(item) {
 
 function difficultyTier(value) {
   const n = Number(value || 0);
-  if (n <= 2) return "beginner";
-  if (n === 3) return "intermediate";
+  if (n <= 1) return "beginner";
+  if (n === 2) return "intermediate";
   return "advanced";
 }
 
