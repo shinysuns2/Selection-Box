@@ -22,6 +22,9 @@
         <button id="adminBtn" class="btn">Admin</button>
       </div>
     </header>
+    <section class="promo-bar">
+      <div id="promoLinks" class="promo-links"></div>
+    </section>
 
     <main class="layout">
       <section class="panel left">
@@ -136,6 +139,19 @@
             <button class="btn" id="saveGameBtn">저장</button>
           </form>
           <div id="gameAdminList" class="list compact"></div>
+        </section>
+
+        <section>
+          <h4 id="promoTitle">홍보 버튼 관리</h4>
+          <form id="promoForm" class="grid-2">
+            <input id="promoName1" placeholder="버튼1 이름" />
+            <input id="promoUrl1" placeholder="버튼1 URL (https://...)" />
+            <input id="promoName2" placeholder="버튼2 이름" />
+            <input id="promoUrl2" placeholder="버튼2 URL (https://...)" />
+            <input id="promoName3" placeholder="버튼3 이름" />
+            <input id="promoUrl3" placeholder="버튼3 URL (https://...)" />
+            <button class="btn" id="savePromoBtn">저장</button>
+          </form>
         </section>
       </div>
     </dialog>
