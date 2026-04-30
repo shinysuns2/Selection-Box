@@ -239,7 +239,6 @@ function persist() {
       selectedDifficulty: state.selectedDifficulty,
       sortBy: state.sortBy,
       selectedGameIds: state.selectedGameIds,
-      // promoLinks는 이제 Supabase 공유 데이터로 관리
     })
   );
 }
@@ -264,24 +263,18 @@ async function fetchPromoLinks() {
     position: Number(row.position ?? 1),
   }));
 
-  while (links.length < 3) {
-    links.push({ name: "", url: "" });
-  }
+  while (links.length < 3) links.push({ name: "", url: "" });
 
   state.promoLinks = links.slice(0, 3);
   persist();
 }
 
 async function savePromoLinksShared(links) {
-  // 기존 active 링크 비활성화
   const { error: deactivateError } = await supabaseClient
     .from("promo_links")
     .update({ is_active: false })
     .eq("is_active", true);
-
-  if (deactivateError) {
-    throw deactivateError;
-  }
+  if (deactivateError) throw deactivateError;
 
   const payload = links
     .map((item, index) => ({
@@ -292,14 +285,10 @@ async function savePromoLinksShared(links) {
     }))
     .filter((row) => row.url);
 
-  if (!payload.length) {
-    return;
-  }
+  if (!payload.length) return;
 
   const { error: insertError } = await supabaseClient.from("promo_links").insert(payload);
-  if (insertError) {
-    throw insertError;
-  }
+  if (insertError) throw insertError;
 }
 
 function fileToDataUrl(file) {
@@ -974,7 +963,20 @@ function bind() {
   const dialog = el("adminDialog");
   el("adminBtn").addEventListener("click", () => dialog.showModal());
 
+  // ✅ Cancel 버튼 즉시 닫기
+  el("cancelBtn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    dialog.close("cancel");
+  });
+
   el("adminLoginForm").addEventListener("submit", async (e) => {
+    // submitter가 cancel이면 로그인 로직 수행하지 않고 닫기
+    if (e.submitter?.value === "cancel") {
+      e.preventDefault();
+      dialog.close("cancel");
+      return;
+    }
+
     e.preventDefault();
     const password = el("adminPassword").value;
     const { error } = await supabaseClient.auth.signInWithPassword({ email: ADMIN_EMAIL, password });
