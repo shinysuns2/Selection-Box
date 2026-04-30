@@ -424,17 +424,21 @@ function displayPromoName(name, url, index) {
 }
 
 function renderPromoLinks() {
-  const links = (state.promoLinks || [])
-    .slice(0, 3)
-    .map((item, index) => ({
-      name: displayPromoName(item?.name, normalizeUrl(item?.url), index),
-      url: normalizeUrl(item?.url),
-    }))
-    .filter((x) => x.url);
+  const links = Array.from({ length: 3 }, (_, index) => {
+    const item = state.promoLinks?.[index] || {};
+    const url = normalizeUrl(item?.url);
+    return {
+      name: displayPromoName(item?.name, url, index),
+      url,
+      enabled: Boolean(url),
+    };
+  });
   el("promoLinks").innerHTML = links
     .map(
       (item) =>
-        `<a class="promo-link-btn" href="${item.url}" target="_blank" rel="noopener noreferrer">${item.name}</a>`
+        item.enabled
+          ? `<a class="promo-link-btn" href="${item.url}" target="_blank" rel="noopener noreferrer">${item.name}</a>`
+          : `<a class="promo-link-btn" href="#" aria-disabled="true" style="opacity:.5;pointer-events:none;">${item.name}</a>`
     )
     .join("");
   const raw = state.promoLinks || [];
