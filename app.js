@@ -419,7 +419,7 @@ function recommendGames() {
       return { game: g, totalScore: difficultyScore + mechanismScore + playerScore, fitGap: Math.max(0, remain - Number(g.lengthCm)) };
     })
     .sort((a, b) => b.totalScore - a.totalScore || a.fitGap - b.fitGap)
-    .slice(0, 3); // 강제 3개
+    .slice(0, 3);
 }
 
 function renderRecommend() {
