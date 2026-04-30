@@ -566,17 +566,19 @@ function renderSelectors() {
 function renderGames() {
   const q = el("searchInput").value?.trim().toLowerCase() || "";
 
-  const list = state.games.filter((g) => {
-    const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
-    const playersOk =
-      state.selectedPlayers === "all" ||
-      (state.selectedPlayers === "6plus"
-        ? Number(g.playersMax) >= 6
-        : Number(g.playersMin) <= Number(state.selectedPlayers) && Number(state.selectedPlayers) <= Number(g.playersMax));
-    const difficultyOk = state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
-    const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
-    return categoryOk && playersOk && difficultyOk && nameOk;
-  });
+  const list = state.games
+    .filter((g) => {
+      const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
+      const playersOk =
+        state.selectedPlayers === "all" ||
+        (state.selectedPlayers === "6plus"
+          ? Number(g.playersMax) >= 6
+          : Number(g.playersMin) <= Number(state.selectedPlayers) && Number(state.selectedPlayers) <= Number(g.playersMax));
+      const difficultyOk = state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
+      const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
+      const fitOk = canFitGame(g);
+      return categoryOk && playersOk && difficultyOk && nameOk && fitOk;
+    });
 
   list.sort((a, b) => {
     if ((state.sortBy || "abc") === "thickness") {
@@ -588,17 +590,16 @@ function renderGames() {
   });
 
   el("gamesList").innerHTML = list
-    .map((g) => {
-      const canFit = canFitGame(g);
-      return `<article class="card" data-game-id="${g.id}" draggable="${canFit ? "true" : "false"}" ${canFit ? "" : 'data-blocked="1" style="opacity:.55;"'}>
+    .map(
+      (g) => `<article class="card" data-game-id="${g.id}" draggable="true">
         <img src="${g.imageUrl}" alt="${nameOf(g)}" loading="lazy" decoding="async" />
         <div class="meta">
           <div>${nameOf(g)}</div>
           <small>${g.lengthCm}cm · ${nameOf(state.categories.find((c) => c.id === g.categoryId))} · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)}</small>
         </div>
-        <button class="btn add-btn" data-id="${g.id}" ${canFit ? "" : "disabled"}>${canFit ? text("add") : text("full")}</button>
-      </article>`;
-    })
+        <button class="btn add-btn" data-id="${g.id}">${text("add")}</button>
+      </article>`
+    )
     .join("");
 }
 
@@ -867,10 +868,6 @@ function bind() {
     document.body.addEventListener("dragstart", (e) => {
       const card = e.target.closest(".card[data-game-id]");
       if (!card) return;
-      if (card.dataset.blocked === "1") {
-        e.preventDefault();
-        return;
-      }
       draggingGameId = card.dataset.gameId;
       e.dataTransfer?.setData("text/plain", draggingGameId || "");
       if (e.dataTransfer) e.dataTransfer.effectAllowed = "copy";
@@ -905,7 +902,6 @@ function bind() {
   document.body.addEventListener("click", async (e) => {
     const addBtn = e.target.closest(".add-btn");
     if (addBtn) {
-      if (addBtn.disabled) return;
       const card = addBtn.closest(".card");
       const img = card?.querySelector("img");
       addGame(addBtn.dataset.id, img || addBtn);
