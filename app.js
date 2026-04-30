@@ -338,7 +338,7 @@ async function fetchSharedData() {
       deduped.push({ id: "c11-misc", name: { ko: "기타", en: "Other / Misc", ja: "その他" } });
     }
     state.categories = deduped;
-  }
+  }  }
   if (boxes?.length) {
     state.boxes = boxes.map((b) => ({
       id: b.id,
@@ -677,9 +677,7 @@ function bind() {
     state.lang = e.target.value;
     persist();
     render();
-  });
-
-  el("themeToggle").addEventListener("click", () => {
+  });  el("themeToggle").addEventListener("click", () => {
     state.dark = !state.dark;
     persist();
     render();
