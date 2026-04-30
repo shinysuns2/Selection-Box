@@ -182,12 +182,18 @@ function dedupeCategories(list) {
       (c?.name?.en || "").trim().toLowerCase(),
       (c?.name?.ja || "").trim().toLowerCase(),
     ].join("|");
-
     if (key === "||") return false;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+}
+
+function safeImageUrl(raw, fallback = "https://placehold.co/120x168?text=No+Image") {
+  const v = String(raw || "").trim();
+  if (!v) return fallback;
+  if (/^https?:\/\//i.test(v)) return v;
+  return `https://${v}`;
 }
 
 function loadState() {
@@ -199,7 +205,8 @@ function loadState() {
       playersMin: Number(g.playersMin ?? 1),
       playersMax: Number(g.playersMax ?? Math.max(2, g.playersMin ?? 2)),
       difficulty: Number(g.difficulty ?? 3),
-      boxImageUrl: g.boxImageUrl || g.imageUrl,
+      imageUrl: safeImageUrl(g.imageUrl),
+      boxImageUrl: safeImageUrl(g.boxImageUrl || g.imageUrl, safeImageUrl(g.imageUrl)),
     }));
     loaded.boxes = (loaded.boxes || []).map((b) => ({ ...b, imageUrl: b.imageUrl || "" }));
     loaded.selectedPlayers ||= "all";
@@ -258,7 +265,6 @@ function nameOf(item) { return item?.name?.[state.lang] || item?.name?.ko || "-"
 function difficultyTier(v) { const n = Number(v || 0); if (n <= 1) return "beginner"; if (n === 2) return "intermediate"; return "advanced"; }
 function difficultyLabel(v) { return text(`diff_${difficultyTier(v)}`); }
 function normalizeUrl(raw) { const v = String(raw || "").trim(); if (!v) return ""; return /^https?:\/\//i.test(v) ? v : `https://${v}`; }
-function isUuid(v) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || "")); }
 
 function raiseIfError(error, fallback) {
   if (!error) return;
@@ -285,20 +291,29 @@ async function fetchSharedData() {
     );
   }
   if (boxRes.data?.length) {
-    state.boxes = boxRes.data.map((b) => ({ id: b.id, name: { ko: b.name_ko, en: b.name_en, ja: b.name_ja }, lengthCm: Number(b.length_cm), imageUrl: b.image_url || "" }));
+    state.boxes = boxRes.data.map((b) => ({
+      id: b.id,
+      name: { ko: b.name_ko, en: b.name_en, ja: b.name_ja },
+      lengthCm: Number(b.length_cm),
+      imageUrl: b.image_url || "",
+    }));
   }
   if (gameRes.data?.length) {
-    state.games = gameRes.data.map((g) => ({
-      id: g.id,
-      name: { ko: g.name_ko, en: g.name_en, ja: g.name_ja },
-      lengthCm: Number(g.length_cm),
-      categoryId: g.category_id,
-      playersMin: Number(g.players_min),
-      playersMax: Number(g.players_max),
-      difficulty: Number(g.difficulty),
-      imageUrl: g.image_url,
-      boxImageUrl: g.box_image_url || g.image_url,
-    }));
+    state.games = gameRes.data.map((g) => {
+      const listImg = safeImageUrl(g.image_url);
+      const boxImg = safeImageUrl(g.box_image_url || g.image_url, listImg);
+      return {
+        id: g.id,
+        name: { ko: g.name_ko, en: g.name_en, ja: g.name_ja },
+        lengthCm: Number(g.length_cm),
+        categoryId: g.category_id,
+        playersMin: Number(g.players_min),
+        playersMax: Number(g.players_max),
+        difficulty: Number(g.difficulty),
+        imageUrl: listImg,
+        boxImageUrl: boxImg,
+      };
+    });
   }
 
   if (!state.boxes.find((b) => b.id === state.selectedBoxId)) state.selectedBoxId = state.boxes[0]?.id || "b1";
@@ -386,7 +401,8 @@ function renderGames() {
   list.sort((a, b) => (state.sortBy === "thickness" ? Number(a.lengthCm) - Number(b.lengthCm) : 0) || nameOf(a).localeCompare(nameOf(b), undefined, { sensitivity: "base" }));
 
   el("gamesList").innerHTML = list.map((g) => `<article class="card" data-game-id="${g.id}" draggable="true">
-    <img src="${g.imageUrl}" alt="${nameOf(g)}" loading="lazy" decoding="async" />
+    <img src="${safeImageUrl(g.imageUrl)}" alt="${nameOf(g)}" loading="lazy" decoding="async"
+         onerror="this.onerror=null;this.src='https://placehold.co/92x128?text=No+Image';" />
     <div class="meta">
       <div>${nameOf(g)}</div>
       <small>${g.lengthCm}cm · ${nameOf(state.categories.find((c) => c.id === g.categoryId))} · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)}</small>
@@ -417,7 +433,7 @@ function renderBox() {
 
   const filledHtml = selectedGames().map((g) => {
     const widthPct = (Number(g.lengthCm) / box.lengthCm) * 100;
-    return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${g.boxImageUrl || g.imageUrl}')"></figure>`;
+    return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${safeImageUrl(g.boxImageUrl || g.imageUrl)}')"></figure>`;
   }).join("");
   const emptyPct = Math.max(0, (remain / box.lengthCm) * 100);
   el("dropZone").innerHTML = `${filledHtml}${emptyPct > 0.01 ? `<div class="empty-slot" style="width:${emptyPct}%; flex:0 0 ${emptyPct}%"></div>` : ""}`;
@@ -457,7 +473,8 @@ function renderRecommend() {
     return;
   }
   el("recommendList").innerHTML = items.map(({ game }) => `<article class="card" data-game-id="${game.id}" draggable="true">
-    <img src="${game.imageUrl}" alt="${nameOf(game)}" loading="lazy" decoding="async" />
+    <img src="${safeImageUrl(game.imageUrl)}" alt="${nameOf(game)}" loading="lazy" decoding="async"
+         onerror="this.onerror=null;this.src='https://placehold.co/92x128?text=No+Image';" />
     <div class="meta"><div>${nameOf(game)}</div></div>
     <button class="btn add-btn" data-id="${game.id}">${text("add")}</button>
   </article>`).join("");
@@ -470,7 +487,7 @@ function renderAdminLists() {
 
 function animateToBox(imgSrc, fromEl) {
   const fly = document.createElement("img");
-  fly.src = imgSrc;
+  fly.src = safeImageUrl(imgSrc);
   fly.className = "fly";
   document.body.appendChild(fly);
   const from = fromEl.getBoundingClientRect();
@@ -623,10 +640,8 @@ function bind() {
     el("adminPassword").value = "";
   });
 
-  // ✅ 박스 저장
   el("boxForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     const payload = {
       name_ko: el("boxNameKo").value.trim(),
       name_en: el("boxNameEn").value.trim(),
@@ -635,11 +650,9 @@ function bind() {
       image_url: el("boxImageUrl").value.trim() || "",
       is_active: true,
     };
-
     const { error } = editingBoxId
       ? await supabaseClient.from("boxes").update(payload).eq("id", editingBoxId)
       : await supabaseClient.from("boxes").insert(payload);
-
     raiseIfError(error, "박스 저장 실패");
     editingBoxId = null;
     e.target.reset();
@@ -648,10 +661,8 @@ function bind() {
     alert("박스 저장 완료");
   });
 
-  // ✅ 게임 저장
   el("gameForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     const payload = {
       name_ko: el("gameNameKo").value.trim(),
       name_en: el("gameNameEn").value.trim(),
@@ -665,11 +676,9 @@ function bind() {
       category_id: el("gameCategory").value,
       is_active: true,
     };
-
     const { error } = editingGameId
       ? await supabaseClient.from("games").update(payload).eq("id", editingGameId)
       : await supabaseClient.from("games").insert(payload);
-
     raiseIfError(error, "게임 저장 실패");
     editingGameId = null;
     e.target.reset();
