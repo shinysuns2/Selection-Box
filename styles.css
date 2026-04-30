@@ -18,15 +18,12 @@
 
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
-html,
-body {
+html, body {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden; /* ✅ 가로 스크롤 방지 */
+  overflow-x: hidden;
 }
 
 body {
@@ -34,12 +31,6 @@ body {
   font-family: Inter, system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
-}
-
-img,
-video,
-canvas {
-  max-width: 100%;
 }
 
 .topbar {
@@ -75,7 +66,6 @@ canvas {
   max-width: 100%;
 }
 
-/* promo links always 1 row */
 .promo-links {
   width: 100%;
   display: grid;
@@ -137,7 +127,7 @@ canvas {
   border-radius: 14px;
   padding: 12px;
   min-height: 72vh;
-  min-width: 0; /* ✅ grid item overflow 방지 */
+  min-width: 0;
 }
 
 .row {
@@ -147,10 +137,11 @@ canvas {
   min-width: 0;
 }
 
-.panel-actions {
-  margin-bottom: 0;
-  flex-wrap: wrap;
+.filters-wrap {
+  align-items: flex-start;
 }
+
+.panel-actions { margin-bottom: 0; flex-wrap: wrap; }
 
 .between {
   justify-content: space-between;
@@ -207,10 +198,7 @@ canvas {
   background: rgba(15, 23, 42, 0.04);
 }
 
-.meta {
-  min-width: 0;
-}
-
+.meta { min-width: 0; }
 .meta > div,
 .meta small {
   overflow: hidden;
@@ -218,10 +206,7 @@ canvas {
   white-space: nowrap;
   display: block;
 }
-
-.meta small {
-  color: var(--muted);
-}
+.meta small { color: var(--muted); }
 
 .btn {
   border: 1px solid var(--accent);
@@ -233,7 +218,6 @@ canvas {
   cursor: pointer;
   max-width: 100%;
 }
-
 .btn.ghost {
   background: transparent;
   color: var(--text);
@@ -317,27 +301,21 @@ canvas {
   background-repeat: no-repeat;
   background-color: transparent;
 }
-
 .plug-item::before {
   content: "";
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 1px;
-  height: 100%;
+  top: 0; right: 0;
+  width: 1px; height: 100%;
   background: rgba(15, 23, 42, 0.25);
   z-index: 3;
 }
-
 .plug-item:last-child::before { display: none; }
-
 .plug-item::after {
   content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(to bottom, rgba(255,255,255,.08), rgba(0,0,0,.08));
 }
-
 .empty-slot {
   height: 100%;
   border-radius: 0;
@@ -355,7 +333,6 @@ canvas {
   border-radius: 999px;
   overflow: hidden;
 }
-
 #progressBar {
   background: linear-gradient(90deg, #5a67d8, #6aa6ff);
   width: 0%;
@@ -378,7 +355,6 @@ canvas {
   gap: 6px;
   margin-top: 10px;
 }
-
 .chip {
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -388,11 +364,10 @@ canvas {
 
 .grid-2 {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
   gap: 8px;
   margin-bottom: 10px;
 }
-
 dialog {
   width: min(980px, 92vw);
   border: 1px solid var(--border);
@@ -400,10 +375,7 @@ dialog {
   background: var(--panel);
   color: var(--text);
 }
-
-.compact .card {
-  grid-template-columns: minmax(0, 1fr) auto auto;
-}
+.compact .card { grid-template-columns: minmax(0,1fr) auto auto; }
 
 .fly {
   position: fixed;
@@ -414,10 +386,7 @@ dialog {
   z-index: 999;
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.24);
   will-change: transform, opacity, filter;
-  transition:
-    transform .32s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity .32s cubic-bezier(0.22, 1, 0.36, 1),
-    filter .32s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform .32s cubic-bezier(0.22,1,0.36,1), opacity .32s cubic-bezier(0.22,1,0.36,1), filter .32s cubic-bezier(0.22,1,0.36,1);
 }
 
 #exportBoxArea.export-static .plug-item,
@@ -425,24 +394,38 @@ dialog {
   animation: none !important;
   transform: none !important;
 }
+#exportBoxArea.export-static #boxPlaceholder { display: none !important; }
 
-#exportBoxArea.export-static #boxPlaceholder {
-  display: none !important;
+/* ✅ category checkboxes */
+.category-checks-block { min-width: 220px; flex: 1 1 260px; }
+.checks-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  max-height: 110px;
+  overflow: auto;
+}
+.check-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  white-space: nowrap;
 }
 
 @media (max-width: 1024px) {
   .layout {
     grid-template-columns: 1fr;
-    grid-template-areas:
-      "right"
-      "center"
-      "left";
+    grid-template-areas: "right" "center" "left";
   }
-
   .right { grid-area: right; }
   .center { grid-area: center; }
   .left { grid-area: left; }
-
   .panel { min-height: auto; }
 }
 
@@ -451,134 +434,47 @@ dialog {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-    padding: 10px 10px;
+    padding: 10px;
   }
+  .top-controls { width: 100%; gap: 6px; }
+  .top-left { gap: 8px; }
 
-  .top-controls {
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .top-left {
-    width: 100%;
-    gap: 8px;
-    overflow: hidden;
-  }
-
-  .top-left h1 {
-    font-size: 42px;
-    max-width: 100%;
-  }
-
-  /* ✅ promo buttons always 1 row on mobile */
   .promo-links {
-    width: 100%;
     display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(3, minmax(0,1fr)) !important;
     gap: 4px !important;
   }
-
   .promo-link-btn {
-    width: 100% !important;
-    min-width: 0 !important;
     min-height: 28px;
     padding: 4px 2px !important;
     font-size: 9px !important;
-    letter-spacing: -0.2px;
     line-height: 1.1;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
   }
 
-  .layout {
-    padding: 8px;
-    gap: 8px;
-  }
+  .layout { padding: 8px; gap: 8px; }
+  .panel { padding: 10px; border-radius: 10px; }
 
-  .panel {
-    padding: 10px;
-    border-radius: 10px;
-  }
-
-  .row {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .row label {
-    min-width: 0;
-    flex: 1 1 140px;
-  }
+  .row { flex-wrap: wrap; gap: 8px; }
+  .row label { min-width: 0; flex: 1 1 140px; }
 
   .card {
-    grid-template-columns: 44px minmax(0, 1fr) auto;
-    padding: 8px;
+    grid-template-columns: 44px minmax(0,1fr) auto;
     gap: 6px;
   }
+  .card img { width: 44px; height: 44px; }
 
-  .card img {
-    width: 44px;
-    height: 44px;
-  }
+  #gamesList .card { grid-template-columns: 40px minmax(0,1fr) auto; }
+  #gamesList .card img { width: 40px; height: 56px; }
 
-  #gamesList .card {
-    grid-template-columns: 40px minmax(0, 1fr) auto;
-  }
+  .btn { min-height: 30px; font-size: 12px; padding: 5px 8px; }
+  #recommendList .card .btn { min-width: 40px; font-size: 11px; padding: 4px 6px; }
 
-  #gamesList .card img {
-    width: 40px;
-    height: 56px;
-  }
-
-  .btn {
-    padding: 5px 8px;
-    min-height: 30px;
-    font-size: 12px;
-  }
-
-  /* ✅ 추천 카드 Add 버튼 잘림 방지 */
-  #recommendList .card .btn {
-    min-width: 40px;
-    padding: 4px 6px;
-    font-size: 11px;
-  }
-
-  input, select, button {
-    font-size: 14px;
-    max-width: 100%;
-  }
-
-  .box-placeholder {
-    font-size: 18px;
-  }
+  .box-placeholder { font-size: 18px; }
 }
 
 @media (max-width: 480px) {
-  body {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .top-left h1 {
-    font-size: 28px;
-  }
-
-  .promo-link-btn {
-    font-size: 8px !important;
-    padding: 3px 1px !important;
-  }
-
-  .layout {
-    padding: 6px;
-    gap: 6px;
-  }
-
-  .panel {
-    padding: 8px;
-    border-radius: 10px;
-  }
-
-  .chips { gap: 4px; }
-  .chip { font-size: 11px; }
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  .layout { padding: 6px; gap: 6px; }
+  .panel { padding: 8px; }
+  .promo-link-btn { font-size: 8px !important; padding: 3px 1px !important; }
 }
