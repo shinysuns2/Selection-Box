@@ -746,18 +746,22 @@ function bind() {
       el("boxVisual")?.classList.remove("box-hit");
     });
 
-    const dropZone = el("dropZone");
-    dropZone?.addEventListener("dragover", (e) => {
+    const onDragOver = (e) => {
       e.preventDefault();
       if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
-    });
-    dropZone?.addEventListener("drop", (e) => {
+    };
+    const onDropToBox = (e) => {
       e.preventDefault();
       const droppedId = e.dataTransfer?.getData("text/plain") || draggingGameId;
       if (!droppedId) return;
       addGame(droppedId);
       draggingGameId = null;
       el("boxVisual")?.classList.remove("box-hit");
+    };
+
+    [el("exportBoxArea"), el("boxVisual"), el("dropZone")].forEach((target) => {
+      target?.addEventListener("dragover", onDragOver);
+      target?.addEventListener("drop", onDropToBox);
     });
   }
 
