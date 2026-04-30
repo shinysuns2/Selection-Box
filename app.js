@@ -174,6 +174,19 @@ let draggingGameId = null;
 
 const el = (id) => document.getElementById(id);
 
+function dedupeCategories(list) {
+  const seen = new Set();
+  return (list || []).filter((c) => {
+    const key =
+      String(c?.id || "").trim() ||
+      `${c?.name?.ko || ""}|${c?.name?.en || ""}|${c?.name?.ja || ""}`;
+    if (!key) return false;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function loadState() {
   try {
     const local = JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}");
@@ -190,6 +203,7 @@ function loadState() {
     loaded.selectedDifficulty ||= "all";
     loaded.sortBy ||= "abc";
     loaded.promoLinks = (loaded.promoLinks || defaultState.promoLinks).slice(0, 3);
+    loaded.categories = dedupeCategories(loaded.categories || []);
     return loaded;
   } catch {
     return structuredClone(defaultState);
@@ -260,7 +274,12 @@ async function fetchSharedData() {
   raiseIfError(gameRes.error, "게임 로딩 실패");
 
   if (catRes.data?.length) {
-    state.categories = catRes.data.map((c) => ({ id: c.id, name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja } }));
+    state.categories = dedupeCategories(
+      catRes.data.map((c) => ({
+        id: c.id,
+        name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja },
+      }))
+    );
   }
   if (boxRes.data?.length) {
     state.boxes = boxRes.data.map((b) => ({ id: b.id, name: { ko: b.name_ko, en: b.name_en, ja: b.name_ja }, lengthCm: Number(b.length_cm), imageUrl: b.image_url || "" }));
@@ -334,10 +353,12 @@ function renderPromoLinks() {
 }
 
 function renderSelectors() {
+  const categories = dedupeCategories(state.categories);
+
   el("boxSelect").innerHTML = state.boxes.map((b) => `<option value="${b.id}">${nameOf(b)} (${b.lengthCm}cm)</option>`).join("");
   el("boxSelect").value = selectedBox().id;
 
-  el("categorySelect").innerHTML = [`<option value="all">${text("all")}</option>`, ...state.categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`)].join("");
+  el("categorySelect").innerHTML = [`<option value="all">${text("all")}</option>`, ...categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`)].join("");
   el("categorySelect").value = state.selectedCategory;
 
   el("playersSelect").innerHTML = [`<option value="all">${text("allPlayers")}</option>`,`<option value="1">1</option>`,`<option value="2">2</option>`,`<option value="3">3</option>`,`<option value="4">4</option>`,`<option value="5">5</option>`,`<option value="6plus">6+</option>`].join("");
@@ -346,7 +367,7 @@ function renderSelectors() {
   el("difficultySelect").innerHTML = [`<option value="all">${text("allDifficulty")}</option>`,`<option value="beginner">${text("diff_beginner")}</option>`,`<option value="intermediate">${text("diff_intermediate")}</option>`,`<option value="advanced">${text("diff_advanced")}</option>`].join("");
   el("difficultySelect").value = state.selectedDifficulty;
 
-  el("gameCategory").innerHTML = state.categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`).join("");
+  el("gameCategory").innerHTML = categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`).join("");
 }
 
 function renderGames() {
