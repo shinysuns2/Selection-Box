@@ -140,29 +140,7 @@ const defaultState = {
     { id: "c10", name: { ko: "타일 배치/그리드 이동", en: "Tile Placement / Grid Movement", ja: "タイル配置／グリッド移動" } },
     { id: "c11", name: { ko: "기타", en: "Other / Misc", ja: "その他" } },
   ],
-  games: [
-    {
-      id: "g1",
-      name: { ko: "은하 전략", en: "Galaxy Tactics", ja: "銀河タクティクス" },
-      lengthCm: 4.2, categoryId: "c1", playersMin: 2, playersMax: 4, difficulty: 4,
-      imageUrl: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=300&q=60",
-      boxImageUrl: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=300&q=60",
-    },
-    {
-      id: "g2",
-      name: { ko: "파티 큐브", en: "Party Cube", ja: "パーティーキューブ" },
-      lengthCm: 2.8, categoryId: "c2", playersMin: 3, playersMax: 8, difficulty: 2,
-      imageUrl: "https://images.unsplash.com/photo-1603732551681-8f8f8e3b6f7f?auto=format&fit=crop&w=300&q=60",
-      boxImageUrl: "https://images.unsplash.com/photo-1603732551681-8f8f8e3b6f7f?auto=format&fit=crop&w=300&q=60",
-    },
-    {
-      id: "g3",
-      name: { ko: "패밀리 트립", en: "Family Trip", ja: "ファミリートリップ" },
-      lengthCm: 3.6, categoryId: "c3", playersMin: 2, playersMax: 5, difficulty: 3,
-      imageUrl: "https://images.unsplash.com/photo-1529480780361-c8cb81eb5735?auto=format&fit=crop&w=300&q=60",
-      boxImageUrl: "https://images.unsplash.com/photo-1529480780361-c8cb81eb5735?auto=format&fit=crop&w=300&q=60",
-    },
-  ],
+  games: [],
   promoLinks: [{ name: "", url: "" }, { name: "", url: "" }, { name: "", url: "" }],
   selectedGameIds: [],
 };
@@ -596,6 +574,25 @@ function bind() {
       return;
     }
 
+    const editGame = e.target.closest("[data-edit-game]");
+    if (editGame) {
+      const g = state.games.find((x) => x.id === editGame.dataset.editGame);
+      if (!g) return;
+
+      editingGameId = g.id;
+      el("gameNameKo").value = g.name?.ko || "";
+      el("gameNameEn").value = g.name?.en || "";
+      el("gameNameJa").value = g.name?.ja || "";
+      el("gameLength").value = Number(g.lengthCm) || "";
+      el("gameImageUrl").value = g.imageUrl || "";
+      el("gameBoxImageUrl").value = g.boxImageUrl || "";
+      el("gamePlayersMin").value = Number(g.playersMin) || "";
+      el("gamePlayersMax").value = Number(g.playersMax) || "";
+      el("gameDifficulty").value = String(Number(g.difficulty) || 2);
+      el("gameCategory").value = g.categoryId || "";
+      return;
+    }
+
     const delBox = e.target.closest("[data-del-box]");
     if (delBox) {
       const { error } = await supabaseClient.from("boxes").delete().eq("id", delBox.dataset.delBox);
@@ -664,6 +661,23 @@ function bind() {
   el("gameForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    const minPlayers = Number(el("gamePlayersMin").value);
+    const maxPlayers = Number(el("gamePlayersMax").value);
+    const lengthCm = Number(el("gameLength").value);
+
+    if (!Number.isFinite(lengthCm) || lengthCm <= 0) {
+      alert("length cm를 올바르게 입력해주세요.");
+      return;
+    }
+    if (!Number.isFinite(minPlayers) || !Number.isFinite(maxPlayers)) {
+      alert("min/max players를 모두 입력해주세요.");
+      return;
+    }
+    if (minPlayers > maxPlayers) {
+      alert("min players는 max players보다 클 수 없습니다.");
+      return;
+    }
+
     const existing = state.games.find((x) => x.id === editingGameId);
     const listInput = el("gameImageUrl").value.trim();
     const boxInput = el("gameBoxImageUrl").value.trim();
@@ -672,11 +686,11 @@ function bind() {
       name_ko: el("gameNameKo").value.trim(),
       name_en: el("gameNameEn").value.trim(),
       name_ja: el("gameNameJa").value.trim(),
-      length_cm: Number(el("gameLength").value),
+      length_cm: lengthCm,
       image_url: listInput || existing?.imageUrl || "",
       box_image_url: boxInput || existing?.boxImageUrl || listInput || existing?.imageUrl || "",
-      players_min: Number(el("gamePlayersMin").value),
-      players_max: Number(el("gamePlayersMax").value),
+      players_min: minPlayers,
+      players_max: maxPlayers,
       difficulty: Number(el("gameDifficulty").value),
       category_id: el("gameCategory").value,
       is_active: true,
