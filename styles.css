@@ -31,15 +31,16 @@ body {
   align-items: center;
   padding: 12px 18px;
   border-bottom: 1px solid var(--border);
+  gap: 8px;
 }
 
 .top-controls {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-/* ✅ title + promo links stack */
 .top-left {
   width: 100%;
   min-width: 0;
@@ -47,15 +48,20 @@ body {
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
+  overflow: hidden;
 }
 
-/* ✅ promo buttons always one row (3 columns) */
+.top-left h1 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* ✅ promo links always one row */
 .promo-links {
   width: 100%;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: nowrap;
 }
 
 .promo-link-btn {
@@ -71,7 +77,7 @@ body {
   background: var(--panel);
   color: var(--text);
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -417,16 +423,28 @@ dialog {
   .top-left {
     width: 100%;
     gap: 8px;
+    overflow: hidden;
   }
 
+  /* ✅ hard force: always one row */
   .promo-links {
-    grid-template-columns: repeat(3, minmax(0, 1fr)); /* keep one row on mobile */
-    gap: 6px;
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 4px !important;
   }
 
   .promo-link-btn {
-    font-size: 12px;
-    padding: 6px 4px;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 30px;
+    padding: 4px 2px !important;
+    font-size: 10px !important;
+    letter-spacing: -0.2px;
+    line-height: 1.1;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .row { flex-wrap: wrap; }
