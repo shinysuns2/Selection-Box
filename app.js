@@ -177,10 +177,13 @@ const el = (id) => document.getElementById(id);
 function dedupeCategories(list) {
   const seen = new Set();
   return (list || []).filter((c) => {
-    const key =
-      String(c?.id || "").trim() ||
-      `${c?.name?.ko || ""}|${c?.name?.en || ""}|${c?.name?.ja || ""}`;
-    if (!key) return false;
+    const key = [
+      (c?.name?.ko || "").trim().toLowerCase(),
+      (c?.name?.en || "").trim().toLowerCase(),
+      (c?.name?.ja || "").trim().toLowerCase(),
+    ].join("|");
+
+    if (key === "||") return false;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
