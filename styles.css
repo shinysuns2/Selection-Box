@@ -17,12 +17,14 @@
 }
 
 * { box-sizing: border-box; }
+
 body {
   margin: 0;
   font-family: Inter, system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
 }
+
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -30,18 +32,26 @@ body {
   padding: 12px 18px;
   border-bottom: 1px solid var(--border);
 }
-.top-controls { display: flex; gap: 10px; align-items: center; }
+
+.top-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .top-left {
   display: flex;
   align-items: center;
   gap: 14px;
   min-width: 0;
 }
+
 .promo-links {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
+
 .promo-link-btn {
   display: inline-flex;
   align-items: center;
@@ -55,12 +65,31 @@ body {
   text-decoration: none;
   font-size: 14px;
 }
+
+.games-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sort-mini select {
+  height: 28px;
+  min-width: 92px;
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+}
+
 .layout {
   display: grid;
   grid-template-columns: 1.4fr 1fr 1fr;
   gap: 12px;
   padding: 12px;
 }
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -68,21 +97,44 @@ body {
   padding: 12px;
   min-height: 72vh;
 }
-.row { display: flex; gap: 10px; margin-bottom: 10px; }
+
+.row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
 .panel-actions { margin-bottom: 0; }
-.between { justify-content: space-between; align-items: center; }
-.list { display: grid; gap: 8px; max-height: 58vh; overflow: auto; }
+
+.between {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+  max-height: 58vh;
+  overflow: auto;
+}
+
 .recommend-empty {
   margin: 0;
   color: var(--muted);
   font-size: 14px;
 }
+
 .drag-hint {
   margin: 4px 0 0;
   font-size: 12px;
   color: var(--muted);
 }
-#loadMoreGamesBtn { margin-top: 10px; width: 100%; }
+
+#loadMoreGamesBtn {
+  margin-top: 10px;
+  width: 100%;
+}
+
 .card {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -92,10 +144,18 @@ body {
   align-items: center;
   gap: 8px;
 }
-.card img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+
+.card img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
 #gamesList .card {
   grid-template-columns: 50px 1fr auto;
 }
+
 #gamesList .card img {
   width: 50px;
   height: 70px;
@@ -103,19 +163,28 @@ body {
   object-fit: contain;
   background: rgba(15, 23, 42, 0.04);
 }
+
 @media (pointer: fine) and (min-width: 1025px) {
   #gamesList .card[data-game-id],
   #recommendList .card[data-game-id] {
     cursor: grab;
   }
+
   #gamesList .card[data-game-id]:active,
   #recommendList .card[data-game-id]:active {
     cursor: grabbing;
   }
 }
+
 .meta small { color: var(--muted); }
+
 .card.notice { grid-template-columns: 1fr; }
-.card.notice .meta small { white-space: normal; word-break: keep-all; }
+
+.card.notice .meta small {
+  white-space: normal;
+  word-break: keep-all;
+}
+
 .btn {
   border: 1px solid var(--accent);
   background: var(--accent);
@@ -125,11 +194,13 @@ body {
   min-height: 40px;
   cursor: pointer;
 }
+
 .btn.ghost {
   background: transparent;
   color: var(--text);
   border-color: var(--border);
 }
+
 .box-visual {
   position: relative;
   border: 3px solid rgba(71, 85, 105, 0.55);
@@ -143,6 +214,7 @@ body {
     inset 0 -2px 6px rgba(15, 23, 42, 0.15);
   transition: box-shadow .22s ease, border-color .22s ease;
 }
+
 .box-visual::before {
   content: "";
   position: absolute;
@@ -152,10 +224,12 @@ body {
   background: linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.04) 40%, rgba(2,6,23,0.1) 100%);
   z-index: 1;
 }
+
 .box-visual.box-hit {
   border-color: rgba(90, 103, 216, 0.45);
   box-shadow: 0 0 0 2px rgba(90, 103, 216, 0.12) inset, 0 10px 24px rgba(90, 103, 216, 0.14);
 }
+
 .box-visual img {
   position: relative;
   z-index: 0;
@@ -164,6 +238,7 @@ body {
   object-fit: cover;
   filter: saturate(0.95);
 }
+
 .box-placeholder {
   position: absolute;
   inset: 0;
@@ -177,6 +252,7 @@ body {
   background: linear-gradient(135deg, #6ea3cc, #8db3cf);
   z-index: 3;
 }
+
 .drop-zone {
   position: absolute;
   inset: 0;
@@ -188,6 +264,7 @@ body {
   overflow: hidden;
   z-index: 2;
 }
+
 .plug-item {
   position: relative;
   margin: 0;
@@ -201,6 +278,7 @@ body {
   background-repeat: no-repeat;
   background-color: transparent;
 }
+
 .plug-item::before {
   content: "";
   position: absolute;
@@ -211,30 +289,87 @@ body {
   background: rgba(15, 23, 42, 0.25);
   z-index: 3;
 }
+
 .plug-item:last-child::before { display: none; }
+
 .plug-item::after {
   content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(to bottom, rgba(255,255,255,.08), rgba(0,0,0,.08));
 }
+
 .empty-slot {
   height: 100%;
   border-radius: 0;
   background: rgba(107, 114, 128, 0.45);
 }
+
 @keyframes plugIn {
-  from { transform: translateX(10px) scale(0.98); opacity: 0; }
-  to { transform: translateX(0) scale(1); opacity: 1; }
+  from {
+    transform: translateX(10px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
 }
-.progress { background: var(--border); height: 10px; border-radius: 999px; overflow: hidden; }
-#progressBar { background: linear-gradient(90deg, #5a67d8, #6aa6ff); width: 0%; height: 100%; transition: width .3s ease; }
-.stats { display: flex; justify-content: space-between; margin: 10px 0; font-size: 14px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.chip { border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; font-size: 12px; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); }
-.compact .card { grid-template-columns: 1fr auto auto; }
+
+.progress {
+  background: var(--border);
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+#progressBar {
+  background: linear-gradient(90deg, #5a67d8, #6aa6ff);
+  width: 0%;
+  height: 100%;
+  transition: width .3s ease;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+dialog {
+  width: min(980px, 92vw);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.compact .card {
+  grid-template-columns: 1fr auto auto;
+}
+
 .fly {
   position: fixed;
   width: 52px;
@@ -255,6 +390,7 @@ dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius
   animation: none !important;
   transform: none !important;
 }
+
 #exportBoxArea.export-static #boxPlaceholder {
   display: none !important;
 }
@@ -267,9 +403,11 @@ dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius
       "center"
       "left";
   }
+
   .right { grid-area: right; }
   .center { grid-area: center; }
   .left { grid-area: left; }
+
   .panel { min-height: auto; }
 }
 
@@ -279,40 +417,46 @@ dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius
     align-items: flex-start;
     gap: 8px;
   }
+
   .top-controls {
     width: 100%;
     flex-wrap: wrap;
   }
+
   .top-left {
     width: 100%;
     flex-wrap: wrap;
     gap: 8px;
   }
-  .row {
-    flex-wrap: wrap;
-  }
-  .row label {
-    min-width: 140px;
-  }
+
+  .row { flex-wrap: wrap; }
+
+  .row label { min-width: 140px; }
+
   .stats {
     flex-wrap: wrap;
     gap: 8px 12px;
   }
+
   .card {
     grid-template-columns: 48px 1fr auto;
     padding: 8px;
   }
+
   .card img {
     width: 48px;
     height: 48px;
   }
+
   #gamesList .card {
     grid-template-columns: 42px 1fr auto;
   }
+
   #gamesList .card img {
     width: 42px;
     height: 59px;
   }
+
   input, select, button {
     font-size: 16px;
   }
@@ -322,20 +466,23 @@ dialog { width: min(980px, 92vw); border: 1px solid var(--border); border-radius
   body {
     padding-bottom: env(safe-area-inset-bottom);
   }
+
   .layout {
     padding: 8px;
     gap: 8px;
   }
+
   .panel {
     padding: 10px;
     border-radius: 10px;
   }
+
   .box-placeholder {
     font-size: 18px;
   }
-  .chips {
-    gap: 4px;
-  }
+
+  .chips { gap: 4px; }
+
   .chip {
     font-size: 11px;
   }
