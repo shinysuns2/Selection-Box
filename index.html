@@ -29,7 +29,15 @@
     <main class="layout">
       <section class="panel left">
         <div class="row between">
-          <h2 id="gamesTitle">게임 목록</h2>
+          <div class="games-title-row">
+            <h2 id="gamesTitle">게임 목록</h2>
+            <label class="sort-mini">
+              <select id="sortSelect" aria-label="game sort">
+                <option value="abc">ABC</option>
+                <option value="thickness">두께순</option>
+              </select>
+            </label>
+          </div>
           <div class="row">
             <input id="searchInput" type="search" placeholder="검색" />
             <button id="resetFiltersBtn" class="btn ghost">초기화</button>
