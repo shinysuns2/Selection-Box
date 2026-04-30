@@ -2,7 +2,9 @@ const ADMIN_EMAIL = "ryan@playte.com";
 const SUPABASE_URL = "https://nzvmiwfdpjpkamyisvoc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_84BLwfndOfmoVsgpy7Pr-Q_b5iBRqXS";
 const LOCAL_KEY = "selection-box-local-v2";
-const STORAGE_BUCKET = "images"; // ✅ 네 버킷명으로 변경
+const STORAGE_BUCKET = "images"; // ✅ 실제 버킷명으로 바꿔
+const USE_ADMIN_BYPASS = true;   // ✅ true면 로그인 없이 관리자 진입
+
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const i18n = {
@@ -27,7 +29,6 @@ const i18n = {
     allPlayers: "전체 인원",
     allDifficulty: "전체 난이도",
     add: "담기",
-    full: "초과됨",
     overflowMsg: "남은 공간이 부족해서 담을 수 없습니다.",
     noRecommend: "추천 게임이 없습니다.",
     diff_beginner: "초보자",
@@ -64,7 +65,6 @@ const i18n = {
     allPlayers: "All players",
     allDifficulty: "All difficulties",
     add: "Add",
-    full: "Overflow",
     overflowMsg: "Not enough remaining space to add this game.",
     noRecommend: "No recommended games.",
     diff_beginner: "Gateway",
@@ -101,7 +101,6 @@ const i18n = {
     allPlayers: "すべての人数",
     allDifficulty: "すべての難易度",
     add: "追加",
-    full: "超過",
     overflowMsg: "残り容量が足りないため追加できません。",
     noRecommend: "おすすめゲームがありません。",
     diff_beginner: "入門",
@@ -135,9 +134,7 @@ const defaultState = {
 };
 
 let state = loadState();
-let editingBoxId = null;
 let editingGameId = null;
-let draggingGameId = null;
 
 const el = (id) => document.getElementById(id);
 
@@ -152,40 +149,41 @@ function dedupeCategories(list) {
   });
 }
 
-function safeImageUrl(raw, fallback = "https://placehold.co/120x168?text=No+Image") {
+function safeImageUrl(raw, fallback = "https://placehold.co/92x128?text=No+Image") {
   const v = String(raw || "").trim();
   if (!v) return fallback;
   if (/^https?:\/\//i.test(v)) return v;
   return `https://${v}`;
 }
 
-async function uploadImageFile(file, folder = "games") {
+async function uploadImageFile(file, folder) {
   if (!file) return "";
   const ext = (file.name.split(".").pop() || "png").toLowerCase();
-  const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-  const { error: uploadError } = await supabaseClient.storage.from(STORAGE_BUCKET).upload(fileName, file, {
+  const { error: upErr } = await supabaseClient.storage.from(STORAGE_BUCKET).upload(filename, file, {
     upsert: true,
     contentType: file.type || undefined,
   });
-  if (uploadError) throw uploadError;
+  if (upErr) throw upErr;
 
-  const { data } = supabaseClient.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
+  const { data } = supabaseClient.storage.from(STORAGE_BUCKET).getPublicUrl(filename);
   return data?.publicUrl || "";
 }
+
+function text(key) { return i18n[state.lang]?.[key] ?? i18n.ko[key] ?? key; }
+function nameOf(item) { return item?.name?.[state.lang] || item?.name?.ko || "-"; }
+function difficultyTier(v) { const n = Number(v || 0); if (n <= 1) return "beginner"; if (n === 2) return "intermediate"; return "advanced"; }
+function difficultyLabel(v) { return text(`diff_${difficultyTier(v)}`); }
 
 function loadState() {
   try {
     const local = JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}");
     const loaded = { ...defaultState, ...local };
-    loaded.games = (loaded.games || []).map((g) => ({
-      ...g,
-      playersMin: Number(g.playersMin ?? 1),
-      playersMax: Number(g.playersMax ?? 2),
-      difficulty: Number(g.difficulty ?? 2),
-      imageUrl: safeImageUrl(g.imageUrl),
-      boxImageUrl: safeImageUrl(g.boxImageUrl || g.imageUrl),
-    }));
+    loaded.selectedPlayers ||= "all";
+    loaded.selectedDifficulty ||= "all";
+    loaded.selectedCategory ||= "all";
+    loaded.sortBy ||= "abc";
     loaded.categories = dedupeCategories(loaded.categories || []);
     return loaded;
   } catch {
@@ -209,33 +207,10 @@ function persist() {
   );
 }
 
-function text(key) { return i18n[state.lang]?.[key] ?? i18n.ko[key] ?? key; }
-function nameOf(item) { return item?.name?.[state.lang] || item?.name?.ko || "-"; }
-function difficultyTier(v) { const n = Number(v || 0); if (n <= 1) return "beginner"; if (n === 2) return "intermediate"; return "advanced"; }
-function difficultyLabel(v) { return text(`diff_${difficultyTier(v)}`); }
-function normalizeUrl(raw) { const v = String(raw || "").trim(); if (!v) return ""; return /^https?:\/\//i.test(v) ? v : `https://${v}`; }
-
 function raiseIfError(error, fallback) {
   if (!error) return;
   alert(error.message ? `${fallback}\n${error.message}` : fallback);
   throw error;
-}
-
-async function fetchPromoLinks() {
-  const { data, error } = await supabaseClient.from("promo_links").select("*").eq("is_active", true).order("position", { ascending: true }).limit(3);
-  if (error) return;
-  const links = (data || []).map((r) => ({ id: r.id, name: r.name || "", url: r.url || "" }));
-  while (links.length < 3) links.push({ name: "", url: "" });
-  state.promoLinks = links.slice(0, 3);
-}
-
-async function savePromoLinksShared(links) {
-  const { error: deactivateError } = await supabaseClient.from("promo_links").update({ is_active: false }).eq("is_active", true);
-  if (deactivateError) throw deactivateError;
-  const payload = links.map((it, idx) => ({ name: String(it.name || "").trim(), url: String(it.url || "").trim(), position: idx + 1, is_active: !!String(it.url || "").trim() })).filter((r) => r.url);
-  if (!payload.length) return;
-  const { error: insertError } = await supabaseClient.from("promo_links").insert(payload);
-  if (insertError) throw insertError;
 }
 
 async function fetchSharedData() {
@@ -248,33 +223,38 @@ async function fetchSharedData() {
   raiseIfError(boxRes.error, "박스 로딩 실패");
   raiseIfError(gameRes.error, "게임 로딩 실패");
 
-  if (catRes.data?.length) {
-    state.categories = dedupeCategories(catRes.data.map((c) => ({ id: c.id, name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja } })));
-  }
-  if (boxRes.data?.length) {
-    state.boxes = boxRes.data.map((b) => ({ id: b.id, name: { ko: b.name_ko, en: b.name_en, ja: b.name_ja }, lengthCm: Number(b.length_cm), imageUrl: b.image_url || "" }));
-  }
-  if (gameRes.data?.length) {
-    state.games = gameRes.data.map((g) => {
-      const listImg = safeImageUrl(g.image_url);
-      const boxImg = safeImageUrl(g.box_image_url || g.image_url, listImg);
-      return {
-        id: g.id,
-        name: { ko: g.name_ko, en: g.name_en, ja: g.name_ja },
-        lengthCm: Number(g.length_cm),
-        categoryId: g.category_id,
-        playersMin: Number(g.players_min),
-        playersMax: Number(g.players_max),
-        difficulty: Number(g.difficulty),
-        imageUrl: listImg,
-        boxImageUrl: boxImg,
-      };
-    });
+  state.categories = dedupeCategories(
+    (catRes.data || []).map((c) => ({ id: c.id, name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja } }))
+  );
+
+  state.boxes = (boxRes.data || []).map((b) => ({
+    id: b.id,
+    name: { ko: b.name_ko, en: b.name_en, ja: b.name_ja },
+    lengthCm: Number(b.length_cm),
+    imageUrl: b.image_url || "",
+  }));
+
+  state.games = (gameRes.data || []).map((g) => {
+    const listImg = safeImageUrl(g.image_url);
+    const boxImg = safeImageUrl(g.box_image_url || g.image_url, listImg);
+    return {
+      id: g.id,
+      name: { ko: g.name_ko, en: g.name_en, ja: g.name_ja },
+      lengthCm: Number(g.length_cm),
+      categoryId: g.category_id,
+      playersMin: Number(g.players_min),
+      playersMax: Number(g.players_max),
+      difficulty: Number(g.difficulty),
+      imageUrl: listImg,
+      boxImageUrl: boxImg,
+    };
+  });
+
+  if (!state.boxes.find((b) => b.id === state.selectedBoxId)) {
+    state.selectedBoxId = state.boxes[0]?.id || "b1";
   }
 
-  if (!state.boxes.find((b) => b.id === state.selectedBoxId)) state.selectedBoxId = state.boxes[0]?.id || "b1";
   state.selectedGameIds = state.selectedGameIds.filter((id) => state.games.some((g) => g.id === id));
-  await fetchPromoLinks();
   persist();
 }
 
@@ -283,66 +263,82 @@ function selectedGames() { return state.selectedGameIds.map((id) => state.games.
 function calcUsed() { return selectedGames().reduce((sum, g) => sum + Number(g.lengthCm), 0); }
 function canFitGame(game) { return Number(game.lengthCm) <= selectedBox().lengthCm - calcUsed() + 0.0001; }
 
-function renderStaticText() {
-  ["appTitle","gamesTitle","boxLabel","categoryLabel","selectedTitle","playersLabel","difficultyLabel","usedLabel","remainingLabel","fillLabel","recommendTitle","adminLoginTitle","adminPanelTitle","manageBoxTitle","manageGameTitle","promoTitle"]
-    .forEach((k) => { if (el(k)) el(k).textContent = text(k); });
-  if (el("cancelBtn")) el("cancelBtn").textContent = text("cancel");
-  if (el("loginBtn")) el("loginBtn").textContent = text("login");
-  if (el("resetFiltersBtn")) el("resetFiltersBtn").textContent = text("resetFilters");
-  if (el("exportImageBtn")) el("exportImageBtn").textContent = text("exportImage");
-  if (el("resetSelectionBtn")) el("resetSelectionBtn").textContent = text("resetSelection");
-}
-
 function renderSelectors() {
-  const categories = dedupeCategories(state.categories);
-
   if (el("boxSelect")) {
     el("boxSelect").innerHTML = state.boxes.map((b) => `<option value="${b.id}">${nameOf(b)} (${b.lengthCm}cm)</option>`).join("");
     el("boxSelect").value = selectedBox()?.id || "";
   }
 
   if (el("categorySelect")) {
-    el("categorySelect").innerHTML = [`<option value="all">${text("all")}</option>`, ...categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`)].join("");
+    el("categorySelect").innerHTML = [
+      `<option value="all">${text("all")}</option>`,
+      ...state.categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`),
+    ].join("");
     el("categorySelect").value = state.selectedCategory;
   }
 
   if (el("playersSelect")) {
-    el("playersSelect").innerHTML = [`<option value="all">${text("allPlayers")}</option>`,`<option value="1">1</option>`,`<option value="2">2</option>`,`<option value="3">3</option>`,`<option value="4">4</option>`,`<option value="5">5</option>`,`<option value="6plus">6+</option>`].join("");
+    el("playersSelect").innerHTML = [
+      `<option value="all">${text("allPlayers")}</option>`,
+      `<option value="1">1</option>`,
+      `<option value="2">2</option>`,
+      `<option value="3">3</option>`,
+      `<option value="4">4</option>`,
+      `<option value="5">5</option>`,
+      `<option value="6plus">6+</option>`,
+    ].join("");
     el("playersSelect").value = state.selectedPlayers;
   }
 
   if (el("difficultySelect")) {
-    el("difficultySelect").innerHTML = [`<option value="all">${text("allDifficulty")}</option>`,`<option value="beginner">${text("diff_beginner")}</option>`,`<option value="intermediate">${text("diff_intermediate")}</option>`,`<option value="advanced">${text("diff_advanced")}</option>`].join("");
+    el("difficultySelect").innerHTML = [
+      `<option value="all">${text("allDifficulty")}</option>`,
+      `<option value="beginner">${text("diff_beginner")}</option>`,
+      `<option value="intermediate">${text("diff_intermediate")}</option>`,
+      `<option value="advanced">${text("diff_advanced")}</option>`,
+    ].join("");
     el("difficultySelect").value = state.selectedDifficulty;
   }
 
   if (el("gameCategory")) {
-    el("gameCategory").innerHTML = categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`).join("");
+    el("gameCategory").innerHTML = state.categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`).join("");
   }
 }
 
 function renderGames() {
   const q = el("searchInput")?.value?.trim().toLowerCase() || "";
+
   const list = state.games.filter((g) => {
     const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
-    const playersOk = state.selectedPlayers === "all" || (state.selectedPlayers === "6plus" ? Number(g.playersMax) >= 6 : Number(g.playersMin) <= Number(state.selectedPlayers) && Number(state.selectedPlayers) <= Number(g.playersMax));
-    const difficultyOk = state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
-    const nameOk = Object.values(g.name).some((n) => String(n || "").toLowerCase().includes(q));
-    return categoryOk && playersOk && difficultyOk && nameOk && canFitGame(g);
+    const playersOk = state.selectedPlayers === "all" ||
+      (state.selectedPlayers === "6plus"
+        ? Number(g.playersMax) >= 6
+        : Number(g.playersMin) <= Number(state.selectedPlayers) && Number(state.selectedPlayers) <= Number(g.playersMax));
+    const diffOk = state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
+    const nameOk = Object.values(g.name || {}).some((n) => String(n || "").toLowerCase().includes(q));
+    return categoryOk && playersOk && diffOk && nameOk && canFitGame(g);
   });
 
-  list.sort((a, b) => (state.sortBy === "thickness" ? Number(a.lengthCm) - Number(b.lengthCm) : 0) || nameOf(a).localeCompare(nameOf(b), undefined, { sensitivity: "base" }));
+  list.sort((a, b) => (state.sortBy === "thickness" ? Number(a.lengthCm) - Number(b.lengthCm) : 0) ||
+    nameOf(a).localeCompare(nameOf(b), undefined, { sensitivity: "base" }));
 
   if (el("gamesList")) {
-    el("gamesList").innerHTML = list.map((g) => `<article class="card" data-game-id="${g.id}" draggable="true">
-      <img src="${safeImageUrl(g.imageUrl)}" alt="${nameOf(g)}" loading="lazy" decoding="async"
-          onerror="this.onerror=null;this.src='https://placehold.co/92x128?text=No+Image';" />
-      <div class="meta">
-        <div>${nameOf(g)}</div>
-        <small>${g.lengthCm}cm · ${nameOf(state.categories.find((c) => c.id === g.categoryId))} · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)}</small>
-      </div>
-      <button class="btn add-btn" data-id="${g.id}">${text("add")}</button>
-    </article>`).join("");
+    el("gamesList").innerHTML = list.map((g) => `
+      <article class="card" data-game-id="${g.id}" draggable="true">
+        <img
+          src="${safeImageUrl(g.imageUrl)}"
+          alt="${nameOf(g)}"
+          loading="lazy"
+          decoding="async"
+          onerror="this.onerror=null;this.src='https://placehold.co/92x128?text=No+Image';"
+        />
+        <div class="meta">
+          <div>${nameOf(g)}</div>
+          <small>${g.lengthCm}cm · ${nameOf(state.categories.find((c) => c.id === g.categoryId))} · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)}</small>
+        </div>
+        <button class="btn add-btn" data-id="${g.id}">${text("add")}</button>
+      </article>
+    `).join("");
   }
 }
 
@@ -353,71 +349,30 @@ function renderBox() {
   const used = calcUsed();
   const remain = box.lengthCm - used;
   const fill = Math.max(0, Math.min(100, (used / box.lengthCm) * 100));
-  const hasImage = !!box.imageUrl;
-  const hasSelected = selectedGames().length > 0;
-
-  if (el("boxImage")) {
-    el("boxImage").style.display = hasImage ? "block" : "none";
-    if (hasImage) el("boxImage").src = box.imageUrl;
-  }
-  if (el("boxPlaceholder")) el("boxPlaceholder").style.display = hasImage || hasSelected ? "none" : "flex";
 
   if (el("usedValue")) el("usedValue").textContent = `${used.toFixed(1)}cm / ${box.lengthCm}cm`;
   if (el("remainingValue")) el("remainingValue").textContent = `${remain.toFixed(1)}cm`;
   if (el("fillValue")) el("fillValue").textContent = `${fill.toFixed(0)}%`;
+
   if (el("progressBar")) {
     el("progressBar").style.width = `${fill}%`;
     el("progressBar").style.background = remain < 0 ? "#ef4444" : "linear-gradient(90deg,#5a67d8,#6aa6ff)";
   }
 
   if (el("selectedList")) {
-    el("selectedList").innerHTML = selectedGames().map((g, i) => `<span class="chip">${nameOf(g)} (${g.lengthCm}cm) <button data-remove-idx="${i}">×</button></span>`).join("");
+    el("selectedList").innerHTML = selectedGames()
+      .map((g, i) => `<span class="chip">${nameOf(g)} (${g.lengthCm}cm) <button data-remove-idx="${i}">×</button></span>`)
+      .join("");
   }
 
   const filledHtml = selectedGames().map((g) => {
     const widthPct = (Number(g.lengthCm) / box.lengthCm) * 100;
-    return `<figure class="plug-item" title="${nameOf(g)} (${g.lengthCm}cm)" style="width:${widthPct}%; flex:0 0 ${widthPct}%; background-image:url('${safeImageUrl(g.boxImageUrl || g.imageUrl)}')"></figure>`;
+    return `<figure class="plug-item" style="width:${widthPct}%;flex:0 0 ${widthPct}%;background-image:url('${safeImageUrl(g.boxImageUrl || g.imageUrl)}')"></figure>`;
   }).join("");
+
   const emptyPct = Math.max(0, (remain / box.lengthCm) * 100);
-  if (el("dropZone")) el("dropZone").innerHTML = `${filledHtml}${emptyPct > 0.01 ? `<div class="empty-slot" style="width:${emptyPct}%; flex:0 0 ${emptyPct}%"></div>` : ""}`;
-}
-
-function recommendGames() {
-  const picked = selectedGames();
-  const pickedIds = new Set(picked.map((g) => g.id));
-  const remain = selectedBox().lengthCm - calcUsed();
-  return state.games
-    .filter((g) => !pickedIds.has(g.id))
-    .filter((g) => remain >= Number(g.lengthCm))
-    .slice(0, 3)
-    .map((game) => ({ game }));
-}
-
-function renderRecommend() {
-  if (!el("recommendList")) return;
-  if (!selectedBox() || selectedGames().length === 0) {
-    el("recommendList").innerHTML = `<p class="recommend-empty">${text("noRecommend")}</p>`;
-    return;
-  }
-  const items = recommendGames();
-  if (!items.length) {
-    el("recommendList").innerHTML = `<p class="recommend-empty">${text("noRecommend")}</p>`;
-    return;
-  }
-  el("recommendList").innerHTML = items.map(({ game }) => `<article class="card" data-game-id="${game.id}" draggable="true">
-    <img src="${safeImageUrl(game.imageUrl)}" alt="${nameOf(game)}" loading="lazy" decoding="async"
-         onerror="this.onerror=null;this.src='https://placehold.co/92x128?text=No+Image';" />
-    <div class="meta"><div>${nameOf(game)}</div></div>
-    <button class="btn add-btn" data-id="${game.id}">${text("add")}</button>
-  </article>`).join("");
-}
-
-function renderAdminLists() {
-  if (el("boxAdminList")) {
-    el("boxAdminList").innerHTML = state.boxes.map((b) => `<article class="card"><div>${nameOf(b)} (${b.lengthCm}cm)</div><button class="btn ghost" data-del-box="${b.id}">삭제</button></article>`).join("");
-  }
-  if (el("gameAdminList")) {
-    el("gameAdminList").innerHTML = state.games.map((g) => `<article class="card"><div>${nameOf(g)} (${g.lengthCm}cm · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)})</div><button class="btn ghost" data-edit-game="${g.id}">수정</button><button class="btn ghost" data-del-game="${g.id}">삭제</button></article>`).join("");
+  if (el("dropZone")) {
+    el("dropZone").innerHTML = `${filledHtml}${emptyPct > 0.01 ? `<div class="empty-slot" style="width:${emptyPct}%;flex:0 0 ${emptyPct}%"></div>` : ""}`;
   }
 }
 
@@ -430,30 +385,68 @@ function addGame(id) {
   render();
 }
 
+function renderAdminLists() {
+  if (el("gameAdminList")) {
+    el("gameAdminList").innerHTML = state.games.map((g) => `
+      <article class="card">
+        <div>${nameOf(g)} (${g.lengthCm}cm · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)})</div>
+        <button class="btn ghost" data-edit-game="${g.id}">수정</button>
+        <button class="btn ghost" data-del-game="${g.id}">삭제</button>
+      </article>
+    `).join("");
+  }
+}
+
 function render() {
-  document.documentElement.classList.toggle("dark", state.dark);
   if (el("languageSelect")) el("languageSelect").value = state.lang;
   if (el("sortSelect")) el("sortSelect").value = state.sortBy || "abc";
-  renderStaticText();
   renderSelectors();
   renderGames();
   renderBox();
-  renderRecommend();
   renderAdminLists();
 }
 
-function bind() {
-  let searchTimer = null;
+function bindAdminOpen() {
+  const dialog = el("adminDialog");
+  el("adminBtn")?.addEventListener("click", () => {
+    dialog?.showModal();
+    if (USE_ADMIN_BYPASS) {
+      if (el("adminPanel")) el("adminPanel").hidden = false;
+      if (el("adminLoginForm")) el("adminLoginForm").hidden = true;
+    }
+  });
+  el("cancelBtn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    dialog?.close("cancel");
+  });
 
-  el("languageSelect")?.addEventListener("change", (e) => { state.lang = e.target.value; persist(); render(); });
-  el("sortSelect")?.addEventListener("change", (e) => { state.sortBy = e.target.value || "abc"; persist(); renderGames(); });
+  if (!USE_ADMIN_BYPASS) {
+    el("adminLoginForm")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const { error } = await supabaseClient.auth.signInWithPassword({
+        email: ADMIN_EMAIL,
+        password: el("adminPassword").value,
+      });
+      if (!error) {
+        el("adminPanel").hidden = false;
+        el("adminLoginForm").hidden = true;
+      } else {
+        alert(`로그인 실패: ${error.message || "비밀번호 확인"}`);
+      }
+    });
+  }
+}
+
+function bind() {
+  bindAdminOpen();
+
   el("boxSelect")?.addEventListener("change", (e) => { state.selectedBoxId = e.target.value; state.selectedGameIds = []; persist(); render(); });
   el("categorySelect")?.addEventListener("change", (e) => { state.selectedCategory = e.target.value; persist(); renderGames(); });
   el("playersSelect")?.addEventListener("change", (e) => { state.selectedPlayers = e.target.value; persist(); renderGames(); });
   el("difficultySelect")?.addEventListener("change", (e) => { state.selectedDifficulty = e.target.value; persist(); renderGames(); });
-  el("searchInput")?.addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => renderGames(), 120); });
-  el("resetFiltersBtn")?.addEventListener("click", () => { if (el("searchInput")) el("searchInput").value = ""; state.selectedCategory = "all"; state.selectedPlayers = "all"; state.selectedDifficulty = "all"; persist(); render(); });
-  el("resetSelectionBtn")?.addEventListener("click", () => { state.selectedGameIds = []; persist(); render(); });
+  el("sortSelect")?.addEventListener("change", (e) => { state.sortBy = e.target.value || "abc"; persist(); renderGames(); });
+
+  el("searchInput")?.addEventListener("input", () => renderGames());
 
   document.body.addEventListener("click", async (e) => {
     const addBtn = e.target.closest(".add-btn");
@@ -493,44 +486,6 @@ function bind() {
       render();
       return;
     }
-
-    const delBox = e.target.closest("[data-del-box]");
-    if (delBox) {
-      const { error } = await supabaseClient.from("boxes").delete().eq("id", delBox.dataset.delBox);
-      raiseIfError(error, "박스 삭제 실패");
-      await fetchSharedData();
-      state.selectedBoxId = state.boxes[0]?.id || "b1";
-      render();
-      return;
-    }
-  });
-
-  el("boxForm")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const boxFile = el("boxImageFile")?.files?.[0] || null;
-    let uploadedBoxImage = "";
-    if (boxFile) uploadedBoxImage = await uploadImageFile(boxFile, "boxes");
-
-    const payload = {
-      name_ko: el("boxNameKo").value.trim(),
-      name_en: el("boxNameEn").value.trim(),
-      name_ja: el("boxNameJa").value.trim(),
-      length_cm: Number(el("boxLength").value),
-      image_url: uploadedBoxImage || el("boxImageUrl").value.trim() || "",
-      is_active: true,
-    };
-
-    const { error } = editingBoxId
-      ? await supabaseClient.from("boxes").update(payload).eq("id", editingBoxId)
-      : await supabaseClient.from("boxes").insert(payload);
-
-    raiseIfError(error, "박스 저장 실패");
-    editingBoxId = null;
-    e.target.reset();
-    await fetchSharedData();
-    render();
-    alert("박스 저장 완료");
   });
 
   el("gameForm")?.addEventListener("submit", async (e) => {
@@ -539,21 +494,26 @@ function bind() {
     const minPlayers = Number(el("gamePlayersMin").value);
     const maxPlayers = Number(el("gamePlayersMax").value);
     const lengthCm = Number(el("gameLength").value);
-
     if (!Number.isFinite(lengthCm) || lengthCm <= 0) return alert("length cm를 올바르게 입력해주세요.");
-    if (!Number.isFinite(minPlayers) || !Number.isFinite(maxPlayers)) return alert("min/max players를 모두 입력해주세요.");
+    if (!Number.isFinite(minPlayers) || !Number.isFinite(maxPlayers)) return alert("min/max players를 입력해주세요.");
     if (minPlayers > maxPlayers) return alert("min players는 max players보다 클 수 없습니다.");
 
     const existing = state.games.find((x) => x.id === editingGameId);
     const listInput = el("gameImageUrl").value.trim();
     const boxInput = el("gameBoxImageUrl").value.trim();
+
     const listFile = el("gameImageFile")?.files?.[0] || null;
     const boxFile = el("gameBoxImageFile")?.files?.[0] || null;
 
     let uploadedListUrl = "";
     let uploadedBoxUrl = "";
-    if (listFile) uploadedListUrl = await uploadImageFile(listFile, "game-list");
-    if (boxFile) uploadedBoxUrl = await uploadImageFile(boxFile, "game-box");
+    try {
+      if (listFile) uploadedListUrl = await uploadImageFile(listFile, "game-list");
+      if (boxFile) uploadedBoxUrl = await uploadImageFile(boxFile, "game-box");
+    } catch (err) {
+      alert(`이미지 업로드 실패\n${err.message || err}`);
+      return;
+    }
 
     const payload = {
       name_ko: el("gameNameKo").value.trim(),
@@ -580,29 +540,17 @@ function bind() {
     render();
     alert("게임 저장 완료");
   });
-
-  el("promoForm")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const links = [
-      { name: el("promoName1").value.trim(), url: normalizeUrl(el("promoUrl1").value) },
-      { name: el("promoName2").value.trim(), url: normalizeUrl(el("promoUrl2").value) },
-      { name: el("promoName3").value.trim(), url: normalizeUrl(el("promoUrl3").value) },
-    ];
-    try {
-      await savePromoLinksShared(links);
-      await fetchPromoLinks();
-      render();
-      alert("홍보 버튼이 저장되었습니다.");
-    } catch (error) {
-      alert(`홍보 버튼 저장 실패\n${error.message || error}`);
-    }
-  });
 }
 
 async function init() {
   bind();
   render();
-  try { await fetchSharedData(); } catch (error) { console.warn("Shared data fetch failed", error); }
+  try {
+    await fetchSharedData();
+  } catch (error) {
+    console.warn("Shared data fetch failed", error);
+  }
   render();
 }
+
 init();
