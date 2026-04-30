@@ -39,31 +39,42 @@ body {
   align-items: center;
 }
 
+/* ✅ title + promo links stack */
 .top-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+  width: 100%;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 
+/* ✅ promo buttons always one row (3 columns) */
 .promo-links {
-  display: flex;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .promo-link-btn {
+  width: 100%;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 36px;
-  padding: 6px 12px;
+  padding: 6px 8px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
   text-decoration: none;
   font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .games-title-row {
@@ -130,11 +141,6 @@ body {
   color: var(--muted);
 }
 
-#loadMoreGamesBtn {
-  margin-top: 10px;
-  width: 100%;
-}
-
 .card {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -177,13 +183,6 @@ body {
 }
 
 .meta small { color: var(--muted); }
-
-.card.notice { grid-template-columns: 1fr; }
-
-.card.notice .meta small {
-  white-space: normal;
-  word-break: keep-all;
-}
 
 .btn {
   border: 1px solid var(--accent);
@@ -306,14 +305,8 @@ body {
 }
 
 @keyframes plugIn {
-  from {
-    transform: translateX(10px) scale(0.98);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0) scale(1);
-    opacity: 1;
-  }
+  from { transform: translateX(10px) scale(0.98); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
 }
 
 .progress {
@@ -366,9 +359,7 @@ dialog {
   color: var(--text);
 }
 
-.compact .card {
-  grid-template-columns: 1fr auto auto;
-}
+.compact .card { grid-template-columns: 1fr auto auto; }
 
 .fly {
   position: fixed;
@@ -425,12 +416,20 @@ dialog {
 
   .top-left {
     width: 100%;
-    flex-wrap: wrap;
     gap: 8px;
   }
 
-  .row { flex-wrap: wrap; }
+  .promo-links {
+    grid-template-columns: repeat(3, minmax(0, 1fr)); /* keep one row on mobile */
+    gap: 6px;
+  }
 
+  .promo-link-btn {
+    font-size: 12px;
+    padding: 6px 4px;
+  }
+
+  .row { flex-wrap: wrap; }
   .row label { min-width: 140px; }
 
   .stats {
@@ -448,24 +447,18 @@ dialog {
     height: 48px;
   }
 
-  #gamesList .card {
-    grid-template-columns: 42px 1fr auto;
-  }
+  #gamesList .card { grid-template-columns: 42px 1fr auto; }
 
   #gamesList .card img {
     width: 42px;
     height: 59px;
   }
 
-  input, select, button {
-    font-size: 16px;
-  }
+  input, select, button { font-size: 16px; }
 }
 
 @media (max-width: 480px) {
-  body {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+  body { padding-bottom: env(safe-area-inset-bottom); }
 
   .layout {
     padding: 8px;
@@ -477,13 +470,7 @@ dialog {
     border-radius: 10px;
   }
 
-  .box-placeholder {
-    font-size: 18px;
-  }
-
+  .box-placeholder { font-size: 18px; }
   .chips { gap: 4px; }
-
-  .chip {
-    font-size: 11px;
-  }
+  .chip { font-size: 11px; }
 }
