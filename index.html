@@ -43,29 +43,24 @@
             <button id="resetFiltersBtn" class="btn ghost">초기화</button>
           </div>
         </div>
-
-        <div class="row filters-wrap">
+        <div class="row">
           <label>
             <span id="boxLabel">박스</span>
             <select id="boxSelect"></select>
           </label>
-
-          <label class="category-checks-block">
+          <label>
             <span id="categoryLabel">카테고리</span>
-            <div id="categoryChecks" class="checks-wrap"></div>
+            <select id="categorySelect"></select>
           </label>
-
           <label>
             <span id="playersLabel">인원수</span>
             <select id="playersSelect"></select>
           </label>
-
           <label>
             <span id="difficultyLabel">난이도</span>
             <select id="difficultySelect"></select>
           </label>
         </div>
-
         <div id="gamesList" class="list"></div>
       </section>
 
@@ -80,13 +75,11 @@
             <button id="resetSelectionBtn" class="btn ghost">박스 초기화</button>
           </div>
         </div>
-
         <div id="boxVisual" class="box-visual">
           <img id="boxImage" alt="box" />
           <div id="boxPlaceholder" class="box-placeholder">Selection Box</div>
           <div id="dropZone" class="drop-zone"></div>
         </div>
-
         <div class="stats">
           <div><span id="usedLabel">사용</span>: <strong id="usedValue">0</strong></div>
           <div><span id="remainingLabel">남음</span>: <strong id="remainingValue">0</strong></div>
@@ -107,6 +100,7 @@
         <h3 id="adminLoginTitle">관리자 로그인</h3>
         <input id="adminPassword" type="password" placeholder="password" required />
         <menu>
+          <!-- ✅ 핵심 수정: submit이 아닌 button -->
           <button type="button" class="btn ghost" id="cancelBtn">취소</button>
           <button value="default" class="btn" id="loginBtn">로그인</button>
         </menu>
