@@ -126,12 +126,7 @@ const defaultState = {
   selectedPlayers: "all",
   selectedDifficulty: "all",
   sortBy: "abc",
-
-  // ✅ 체크박스 OR 필터용
   checkedCategoryIds: [],
-  checkedPlayers: [],
-  checkedDifficulties: [],
-
   boxes: [{ id: "b1", name: { ko: "기본 박스", en: "Default Box", ja: "基本ボックス" }, lengthCm: 29, imageUrl: "" }],
   categories: [
     { id: "c1", name: { ko: "트릭테이킹", en: "Trick-taking", ja: "トリックテイキング" } },
@@ -174,10 +169,18 @@ const defaultState = {
 };
 
 let state = loadState();
-let editingBoxId = null;
-let editingGameId = null;
 let draggingGameId = null;
 const el = (id) => document.getElementById(id);
+
+function dedupeCategories(list) {
+  const seen = new Set();
+  return (list || []).filter((c) => {
+    const key = String(c.id || "").trim() || `${c.name?.en || ""}|${c.name?.ko || ""}|${c.name?.ja || ""}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 function loadState() {
   try {
@@ -195,9 +198,8 @@ function loadState() {
     loaded.selectedDifficulty ||= "all";
     loaded.sortBy ||= "abc";
     loaded.checkedCategoryIds ||= [];
-    loaded.checkedPlayers ||= [];
-    loaded.checkedDifficulties ||= [];
     loaded.promoLinks = (loaded.promoLinks || defaultState.promoLinks).slice(0, 3);
+    loaded.categories = dedupeCategories(loaded.categories || []);
     return loaded;
   } catch {
     return structuredClone(defaultState);
@@ -217,8 +219,6 @@ function persist() {
       sortBy: state.sortBy,
       selectedGameIds: state.selectedGameIds,
       checkedCategoryIds: state.checkedCategoryIds,
-      checkedPlayers: state.checkedPlayers,
-      checkedDifficulties: state.checkedDifficulties,
     })
   );
 }
@@ -259,7 +259,9 @@ async function fetchSharedData() {
   raiseIfError(gameRes.error, "게임 로딩 실패");
 
   if (catRes.data?.length) {
-    state.categories = catRes.data.map((c) => ({ id: c.id, name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja } }));
+    state.categories = dedupeCategories(
+      catRes.data.map((c) => ({ id: c.id, name: { ko: c.name_ko, en: c.name_en, ja: c.name_ja } }))
+    );
   }
   if (boxRes.data?.length) {
     state.boxes = boxRes.data.map((b) => ({ id: b.id, name: { ko: b.name_ko, en: b.name_en, ja: b.name_ja }, lengthCm: Number(b.length_cm), imageUrl: b.image_url || "" }));
@@ -280,6 +282,7 @@ async function fetchSharedData() {
 
   if (!state.boxes.find((b) => b.id === state.selectedBoxId)) state.selectedBoxId = state.boxes[0]?.id || "b1";
   state.selectedGameIds = state.selectedGameIds.filter((id) => state.games.some((g) => g.id === id));
+
   await fetchPromoLinks();
   persist();
 }
@@ -291,7 +294,7 @@ function canFitGame(game) { return Number(game.lengthCm) <= selectedBox().length
 
 function renderStaticText() {
   ["appTitle","gamesTitle","boxLabel","categoryLabel","selectedTitle","playersLabel","difficultyLabel","usedLabel","remainingLabel","fillLabel","recommendTitle","adminLoginTitle","adminPanelTitle","manageBoxTitle","manageGameTitle","promoTitle"]
-    .forEach((k) => { const node = el(k); if (node) node.textContent = text(k); });
+    .forEach((k) => { const n = el(k); if (n) n.textContent = text(k); });
 
   if (el("cancelBtn")) el("cancelBtn").textContent = text("cancel");
   if (el("loginBtn")) el("loginBtn").textContent = text("login");
@@ -299,14 +302,27 @@ function renderStaticText() {
   if (el("exportImageBtn")) el("exportImageBtn").textContent = text("exportImage");
   if (el("resetSelectionBtn")) el("resetSelectionBtn").textContent = text("resetSelection");
 
-  const dragHintEl = el("dragHint");
-  if (dragHintEl) dragHintEl.textContent = text(window.matchMedia("(pointer: fine) and (min-width: 1025px)").matches ? "dragHintDesktop" : "dragHintTouch");
-
   const sortSel = el("sortSelect");
   if (sortSel?.options?.length >= 2) {
     sortSel.options[0].textContent = text("sort_abc");
     sortSel.options[1].textContent = text("sort_thickness");
   }
+
+  const hint = el("dragHint");
+  if (hint) hint.textContent = text(window.matchMedia("(pointer: fine) and (min-width: 1025px)").matches ? "dragHintDesktop" : "dragHintTouch");
+}
+
+function renderCategoryChecks() {
+  const wrap = el("categoryChecks");
+  if (!wrap) return;
+  const categories = dedupeCategories(state.categories);
+
+  wrap.innerHTML = categories.map((c) => `
+    <label class="check-item">
+      <input type="checkbox" data-cat-check="${c.id}" ${state.checkedCategoryIds.includes(c.id) ? "checked" : ""} />
+      <span>${nameOf(c)}</span>
+    </label>
+  `).join("");
 }
 
 function renderPromoLinks() {
@@ -336,12 +352,6 @@ function renderSelectors() {
     boxSelect.value = selectedBox().id;
   }
 
-  const catSelect = el("categorySelect");
-  if (catSelect) {
-    catSelect.innerHTML = [`<option value="all">${text("all")}</option>`, ...state.categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`)].join("");
-    catSelect.value = state.selectedCategory;
-  }
-
   const playersSelect = el("playersSelect");
   if (playersSelect) {
     playersSelect.innerHTML = [`<option value="all">${text("allPlayers")}</option>`,`<option value="1">1</option>`,`<option value="2">2</option>`,`<option value="3">3</option>`,`<option value="4">4</option>`,`<option value="5">5</option>`,`<option value="6plus">6+</option>`].join("");
@@ -355,82 +365,40 @@ function renderSelectors() {
   }
 
   const gameCategory = el("gameCategory");
-  if (gameCategory) gameCategory.innerHTML = state.categories.map((c) => `<option value="${c.id}">${nameOf(c)}</option>`).join("");
+  if (gameCategory) gameCategory.innerHTML = dedupeCategories(state.categories).map((c) => `<option value="${c.id}">${nameOf(c)}</option>`).join("");
 
-  // ✅ 체크박스 렌더
-  renderFilterCheckboxes();
-}
-
-function renderFilterCheckboxes() {
-  const catWrap = el("categoryChecks");
-  if (catWrap) {
-    catWrap.innerHTML = state.categories.map((c) => `
-      <label><input type="checkbox" data-cat-check="${c.id}" ${state.checkedCategoryIds.includes(c.id) ? "checked" : ""}/> ${nameOf(c)}</label>
-    `).join(" ");
-  }
-
-  const playerWrap = el("playersChecks");
-  if (playerWrap) {
-    const opts = ["1","2","3","4","5","6plus"];
-    playerWrap.innerHTML = opts.map((p) => `
-      <label><input type="checkbox" data-player-check="${p}" ${state.checkedPlayers.includes(p) ? "checked" : ""}/> ${p === "6plus" ? "6+" : p}</label>
-    `).join(" ");
-  }
-
-  const diffWrap = el("difficultyChecks");
-  if (diffWrap) {
-    const opts = ["beginner","intermediate","advanced"];
-    diffWrap.innerHTML = opts.map((d) => `
-      <label><input type="checkbox" data-diff-check="${d}" ${state.checkedDifficulties.includes(d) ? "checked" : ""}/> ${text(`diff_${d}`)}</label>
-    `).join(" ");
-  }
+  renderCategoryChecks();
 }
 
 function renderGames() {
   const q = el("searchInput")?.value?.trim().toLowerCase() || "";
 
   const list = state.games.filter((g) => {
-    // 기존 단일 select 필터
-    const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
     const playersOk =
       state.selectedPlayers === "all" ||
       (state.selectedPlayers === "6plus"
         ? Number(g.playersMax) >= 6
         : Number(g.playersMin) <= Number(state.selectedPlayers) && Number(state.selectedPlayers) <= Number(g.playersMax));
-    const difficultyOk = state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
 
+    const difficultyOk = state.selectedDifficulty === "all" || state.selectedDifficulty === difficultyTier(g.difficulty);
     const nameOk = Object.values(g.name).some((n) => n.toLowerCase().includes(q));
     const fitOk = canFitGame(g);
 
-    // ✅ 체크박스 OR
-    const catCheckedMatch =
+    // ✅ category OR
+    const categoryOrOk =
       state.checkedCategoryIds.length === 0 ||
       state.checkedCategoryIds.includes(g.categoryId);
 
-    const playerCheckedMatch =
-      state.checkedPlayers.length === 0 ||
-      state.checkedPlayers.some((p) => {
-        if (p === "6plus") return Number(g.playersMax) >= 6;
-        const n = Number(p);
-        return Number(g.playersMin) <= n && n <= Number(g.playersMax);
-      });
-
-    const diffCheckedMatch =
-      state.checkedDifficulties.length === 0 ||
-      state.checkedDifficulties.includes(difficultyTier(g.difficulty));
-
-    // 체크박스는 "포함된 애들을 모두" = OR
-    const hasAnyCheck =
-      state.checkedCategoryIds.length > 0 ||
-      state.checkedPlayers.length > 0 ||
-      state.checkedDifficulties.length > 0;
-
-    const checksOrOk = !hasAnyCheck || catCheckedMatch || playerCheckedMatch || diffCheckedMatch;
-
-    return categoryOk && playersOk && difficultyOk && nameOk && fitOk && checksOrOk;
+    return playersOk && difficultyOk && nameOk && fitOk && categoryOrOk;
   });
 
-  list.sort((a, b) => (state.sortBy === "thickness" ? Number(a.lengthCm) - Number(b.lengthCm) : 0) || nameOf(a).localeCompare(nameOf(b), undefined, { sensitivity: "base" }));
+  list.sort((a, b) => {
+    if (state.sortBy === "thickness") {
+      const d = Number(a.lengthCm) - Number(b.lengthCm);
+      if (d !== 0) return d;
+    }
+    return nameOf(a).localeCompare(nameOf(b), undefined, { sensitivity: "base" });
+  });
 
   const listEl = el("gamesList");
   if (!listEl) return;
@@ -523,7 +491,7 @@ function renderRecommend() {
   </article>`).join("");
 }
 
-function addGame(id, sourceEl) {
+function addGame(id) {
   const game = state.games.find((g) => g.id === id);
   if (!game) return;
   if (!canFitGame(game)) return alert(text("overflowMsg"));
@@ -556,29 +524,16 @@ function bind() {
   el("languageSelect")?.addEventListener("change", (e) => { state.lang = e.target.value; persist(); render(); });
   el("themeToggle")?.addEventListener("click", () => { state.dark = !state.dark; persist(); render(); });
   el("sortSelect")?.addEventListener("change", (e) => { state.sortBy = e.target.value || "abc"; persist(); renderGames(); });
-
   el("boxSelect")?.addEventListener("change", (e) => { state.selectedBoxId = e.target.value; state.selectedGameIds = []; persist(); render(); });
-  el("categorySelect")?.addEventListener("change", (e) => { state.selectedCategory = e.target.value; persist(); renderGames(); });
   el("playersSelect")?.addEventListener("change", (e) => { state.selectedPlayers = e.target.value; persist(); renderGames(); });
   el("difficultySelect")?.addEventListener("change", (e) => { state.selectedDifficulty = e.target.value; persist(); renderGames(); });
 
-  // ✅ 체크박스 OR 바인딩
   document.body.addEventListener("change", (e) => {
     const cat = e.target.closest("[data-cat-check]");
-    if (cat) {
-      state.checkedCategoryIds = toggleInArray(state.checkedCategoryIds, cat.getAttribute("data-cat-check"), cat.checked);
-      persist(); renderGames(); return;
-    }
-    const pl = e.target.closest("[data-player-check]");
-    if (pl) {
-      state.checkedPlayers = toggleInArray(state.checkedPlayers, pl.getAttribute("data-player-check"), pl.checked);
-      persist(); renderGames(); return;
-    }
-    const df = e.target.closest("[data-diff-check]");
-    if (df) {
-      state.checkedDifficulties = toggleInArray(state.checkedDifficulties, df.getAttribute("data-diff-check"), df.checked);
-      persist(); renderGames(); return;
-    }
+    if (!cat) return;
+    state.checkedCategoryIds = toggleInArray(state.checkedCategoryIds, cat.getAttribute("data-cat-check"), cat.checked);
+    persist();
+    renderGames();
   });
 
   el("searchInput")?.addEventListener("input", () => {
@@ -588,12 +543,9 @@ function bind() {
 
   el("resetFiltersBtn")?.addEventListener("click", () => {
     if (el("searchInput")) el("searchInput").value = "";
-    state.selectedCategory = "all";
     state.selectedPlayers = "all";
     state.selectedDifficulty = "all";
     state.checkedCategoryIds = [];
-    state.checkedPlayers = [];
-    state.checkedDifficulties = [];
     persist();
     render();
   });
@@ -623,5 +575,4 @@ async function init() {
   try { await fetchSharedData(); } catch (error) { console.warn("Shared data fetch failed, using local/default data.", error); }
   render();
 }
-
 init();
