@@ -752,6 +752,7 @@ function bind() {
     };
     const onDropToBox = (e) => {
       e.preventDefault();
+      e.stopPropagation();
       const droppedId = e.dataTransfer?.getData("text/plain") || draggingGameId;
       if (!droppedId) return;
       addGame(droppedId);
@@ -759,7 +760,7 @@ function bind() {
       el("boxVisual")?.classList.remove("box-hit");
     };
 
-    [el("exportBoxArea"), el("boxVisual"), el("dropZone")].forEach((target) => {
+    [el("exportBoxArea")].forEach((target) => {
       target?.addEventListener("dragover", onDragOver);
       target?.addEventListener("drop", onDropToBox);
     });
