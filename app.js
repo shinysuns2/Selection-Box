@@ -121,11 +121,14 @@ const i18n = {
   },
 };
 
+const CONTAINER_REFERENCE_LENGTH_CM = 29;
+const CONTAINER_HEIGHT_CM = 14;
+
 const builtInContainers = [
   {
     id: "b1",
     name: { ko: "blue container", en: "blue container", ja: "blue container" },
-    lengthCm: 29,
+    lengthCm: CONTAINER_REFERENCE_LENGTH_CM,
     imageUrl: "",
   },
   {
@@ -621,6 +624,13 @@ function renderBox() {
   const used = calcUsed();
   const remain = box.lengthCm - used;
   const fill = Math.max(0, Math.min(100, (used / box.lengthCm) * 100));
+  const displayWidthPercent = Math.max(
+    1,
+    Math.min(100, (box.lengthCm / CONTAINER_REFERENCE_LENGTH_CM) * 100)
+  );
+  const boxVisual = el("boxVisual");
+  boxVisual.style.width = `${displayWidthPercent}%`;
+  boxVisual.style.aspectRatio = `${box.lengthCm} / ${CONTAINER_HEIGHT_CM}`;
 
   const hasImage = Boolean(box.imageUrl);
   const hasSelectedGames = selectedGames().length > 0;
