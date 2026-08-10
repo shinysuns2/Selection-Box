@@ -633,12 +633,25 @@ function renderBox() {
   boxVisual.style.aspectRatio = `${box.lengthCm} / ${CONTAINER_HEIGHT_CM}`;
   boxVisual.style.marginLeft = "auto";
   boxVisual.style.marginRight = "auto";
-  boxVisual.classList.toggle("red-container", box.id === "b2");
+  const isRedContainer = box.id === "b2";
+  boxVisual.classList.toggle("red-container", isRedContainer);
+  boxVisual.style.borderColor = isRedContainer ? "rgba(127, 29, 29, 0.68)" : "";
+  boxVisual.style.background = isRedContainer
+    ? "linear-gradient(145deg, rgba(239, 68, 68, 0.38), rgba(153, 27, 27, 0.52))"
+    : "";
+
+  const boxPlaceholder = el("boxPlaceholder");
+  boxPlaceholder.style.boxSizing = "border-box";
+  boxPlaceholder.style.padding = "12px";
+  boxPlaceholder.style.textAlign = "center";
+  boxPlaceholder.style.background = isRedContainer
+    ? "linear-gradient(135deg, #df6868, #b93245)"
+    : "";
 
   const hasImage = Boolean(box.imageUrl);
   const hasSelectedGames = selectedGames().length > 0;
   el("boxImage").style.display = hasImage ? "block" : "none";
-  el("boxPlaceholder").style.display = hasImage || hasSelectedGames ? "none" : "flex";
+  boxPlaceholder.style.display = hasImage || hasSelectedGames ? "none" : "flex";
   if (hasImage) el("boxImage").src = box.imageUrl;
   el("usedValue").textContent = `${used.toFixed(1)}cm / ${box.lengthCm}cm`;
   el("remainingValue").textContent = `${remain.toFixed(1)}cm`;
@@ -657,7 +670,8 @@ function renderBox() {
     })
     .join("");
   const emptyPct = Math.max(0, (remain / box.lengthCm) * 100);
-  const emptyHtml = emptyPct > 0.01 ? `<div class="empty-slot" style="width:${emptyPct}%; flex:0 0 ${emptyPct}%"></div>` : "";
+  const emptyBackground = isRedContainer ? "background:rgba(185, 50, 69, 0.58);" : "";
+  const emptyHtml = emptyPct > 0.01 ? `<div class="empty-slot" style="width:${emptyPct}%; flex:0 0 ${emptyPct}%; ${emptyBackground}"></div>` : "";
   el("dropZone").innerHTML = `${filledHtml}${emptyHtml}`;
 }
 
