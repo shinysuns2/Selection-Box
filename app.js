@@ -631,6 +631,9 @@ function renderBox() {
   const boxVisual = el("boxVisual");
   boxVisual.style.width = `${displayWidthPercent}%`;
   boxVisual.style.aspectRatio = `${box.lengthCm} / ${CONTAINER_HEIGHT_CM}`;
+  boxVisual.style.marginLeft = "auto";
+  boxVisual.style.marginRight = "auto";
+  boxVisual.classList.toggle("red-container", box.id === "b2");
 
   const hasImage = Boolean(box.imageUrl);
   const hasSelectedGames = selectedGames().length > 0;
