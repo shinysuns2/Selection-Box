@@ -309,6 +309,11 @@ canvas {
   box-shadow: 0 0 0 2px rgba(90, 103, 216, 0.12) inset, 0 10px 24px rgba(90, 103, 216, 0.14);
 }
 
+.box-visual.red-container {
+  border-color: rgba(127, 29, 29, 0.68);
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.38), rgba(153, 27, 27, 0.52));
+}
+
 .box-visual img {
   position: relative;
   z-index: 0;
@@ -324,12 +329,19 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+  padding: 12px;
+  text-align: center;
   font-size: 28px;
   font-weight: 700;
   letter-spacing: 0.4px;
   color: rgba(255, 255, 255, 0.9);
   background: linear-gradient(135deg, #6ea3cc, #8db3cf);
   z-index: 3;
+}
+
+.box-visual.red-container .box-placeholder {
+  background: linear-gradient(135deg, #df6868, #b93245);
 }
 
 .drop-zone {
@@ -382,6 +394,10 @@ canvas {
   height: 100%;
   border-radius: 0;
   background: rgba(107, 114, 128, 0.45);
+}
+
+.box-visual.red-container .empty-slot {
+  background: rgba(185, 50, 69, 0.58);
 }
 
 @keyframes plugIn {
