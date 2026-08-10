@@ -1218,13 +1218,13 @@ function bind() {
 
 async function init() {
   bind();
-  render();
   try {
     await fetchSharedData();
   } catch (error) {
     console.warn("Shared data fetch failed, using local/default data.", error);
   }
   render();
+  document.documentElement.classList.remove("app-loading");
 }
 
 init();
