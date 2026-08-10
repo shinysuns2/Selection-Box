@@ -134,7 +134,7 @@ const builtInContainers = [
   {
     id: "b2",
     name: { ko: "red container", en: "red container", ja: "red container" },
-    lengthCm: 9.4,
+    lengthCm: 19.4,
     imageUrl: "",
   },
 ];
