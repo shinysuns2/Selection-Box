@@ -121,6 +121,21 @@ const i18n = {
   },
 };
 
+const builtInContainers = [
+  {
+    id: "b1",
+    name: { ko: "blue container", en: "blue container", ja: "blue container" },
+    lengthCm: 29,
+    imageUrl: "",
+  },
+  {
+    id: "b2",
+    name: { ko: "red container", en: "red container", ja: "red container" },
+    lengthCm: 9.4,
+    imageUrl: "",
+  },
+];
+
 const defaultState = {
   lang: "ko",
   dark: false,
@@ -129,14 +144,7 @@ const defaultState = {
   selectedPlayers: "all",
   selectedDifficulty: "all",
   sortBy: "abc",
-  boxes: [
-    {
-      id: "b1",
-      name: { ko: "기본 박스", en: "Default Box", ja: "基本ボックス" },
-      lengthCm: 29,
-      imageUrl: "",
-    },
-  ],
+  boxes: builtInContainers.map((box) => ({ ...box })),
   categories: [
     { id: "c1", name: { ko: "트릭테이킹", en: "Trick-taking", ja: "トリックテイキング" } },
     { id: "c2", name: { ko: "클라이밍", en: "Ladder Climbing", ja: "クライミング" } },
@@ -394,14 +402,20 @@ async function fetchSharedData() {
     state.categories = deduped;
   }
 
-  if (boxes?.length) {
-    state.boxes = boxes.map((b) => ({
+  const sharedBoxes = (boxes || []).map((b) => ({
       id: b.id,
       name: { ko: b.name_ko, en: b.name_en, ja: b.name_ja },
       lengthCm: Number(b.length_cm),
       imageUrl: b.image_url || "",
     }));
-  }
+  const builtInIds = new Set(builtInContainers.map((box) => box.id));
+  const sharedBoxesById = new Map(sharedBoxes.map((box) => [box.id, box]));
+  state.boxes = builtInContainers
+    .map((box) => ({
+      ...box,
+      imageUrl: sharedBoxesById.get(box.id)?.imageUrl || box.imageUrl,
+    }))
+    .concat(sharedBoxes.filter((box) => !builtInIds.has(box.id)));
 
   if (games?.length) {
     state.games = games.map((g) => ({
