@@ -461,6 +461,62 @@ dialog {
   grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
+.admin-game-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-game-title {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.game-visibility-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.visibility-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(90, 103, 216, 0.07);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.visibility-option input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.visibility-option.inactive-option {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.visibility-option.inactive-option input {
+  accent-color: #ef4444;
+}
+
+.admin-game-card.is-inactive .admin-game-title {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
 .fly {
   position: fixed;
   width: 52px;
