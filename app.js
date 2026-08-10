@@ -370,7 +370,7 @@ async function fetchSharedData() {
   const [catRes, boxRes, gameRes] = await Promise.all([
     supabaseClient.from("categories").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
     supabaseClient.from("boxes").select("*").eq("is_active", true).order("created_at", { ascending: true }),
-    supabaseClient.from("games").select("*").eq("is_active", true).order("created_at", { ascending: true }),
+    supabaseClient.from("games").select("*").order("created_at", { ascending: true }),
   ]);
   raiseIfError(catRes.error, "카테고리 로딩 실패");
   raiseIfError(boxRes.error, "박스 로딩 실패");
@@ -431,13 +431,20 @@ async function fetchSharedData() {
       difficulty: Number(g.difficulty),
       imageUrl: g.image_url,
       boxImageUrl: g.box_image_url || g.image_url,
+      isActive: g.is_active !== false,
+      visibleKo: g.visible_ko !== false,
+      visibleEn: g.visible_en !== false,
+      visibleJa: g.visible_ja !== false,
     }));
   }
 
   if (!state.boxes.find((b) => b.id === state.selectedBoxId)) {
     state.selectedBoxId = state.boxes[0]?.id || defaultState.selectedBoxId;
   }
-  state.selectedGameIds = state.selectedGameIds.filter((id) => state.games.some((g) => g.id === id));
+  state.selectedGameIds = state.selectedGameIds.filter((id) => {
+    const game = state.games.find((g) => g.id === id);
+    return game && isGameVisibleInLanguage(game);
+  });
 
   await fetchPromoLinks();
   persist();
@@ -447,8 +454,16 @@ function selectedBox() {
   return state.boxes.find((b) => b.id === state.selectedBoxId) || state.boxes[0];
 }
 
+function isGameVisibleInLanguage(game, lang = state.lang) {
+  if (!game || game.isActive === false) return false;
+  const visibilityField = { ko: "visibleKo", en: "visibleEn", ja: "visibleJa" }[lang] || "visibleKo";
+  return game[visibilityField] !== false;
+}
+
 function selectedGames() {
-  return state.selectedGameIds.map((id) => state.games.find((g) => g.id === id)).filter(Boolean);
+  return state.selectedGameIds
+    .map((id) => state.games.find((g) => g.id === id))
+    .filter((game) => isGameVisibleInLanguage(game));
 }
 
 function calcUsed() {
@@ -583,6 +598,7 @@ function renderGames() {
   const q = el("searchInput").value?.trim().toLowerCase() || "";
 
   const list = state.games
+    .filter((g) => isGameVisibleInLanguage(g))
     .filter((g) => {
       const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
       const playersOk =
@@ -688,6 +704,7 @@ function recommendGames() {
   const recommendLimit = window.matchMedia("(max-width: 768px)").matches ? 3 : 5;
 
   return state.games
+    .filter((g) => isGameVisibleInLanguage(g))
     .filter((g) => !pickedIds.has(g.id))
     .filter((g) => remain >= Number(g.lengthCm))
     .map((g) => {
@@ -739,8 +756,16 @@ function renderAdminLists() {
   `).join("");
 
   el("gameAdminList").innerHTML = state.games.map((g) => `
-    <article class="card">
-      <div>${nameOf(g)} (${g.lengthCm}cm · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)})</div>
+    <article class="card admin-game-card ${g.isActive === false ? "is-inactive" : ""}">
+      <div class="admin-game-main">
+        <div class="admin-game-title">${nameOf(g)} (${g.lengthCm}cm · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)})</div>
+        <div class="game-visibility-controls" aria-label="게임 언어별 표시 설정">
+          <label class="visibility-option inactive-option"><input type="checkbox" data-game-visibility="inactive" data-id="${g.id}" ${g.isActive === false ? "checked" : ""} /> 비활성</label>
+          <label class="visibility-option"><input type="checkbox" data-game-visibility="ko" data-id="${g.id}" ${g.visibleKo !== false ? "checked" : ""} /> 한글</label>
+          <label class="visibility-option"><input type="checkbox" data-game-visibility="en" data-id="${g.id}" ${g.visibleEn !== false ? "checked" : ""} /> 미국</label>
+          <label class="visibility-option"><input type="checkbox" data-game-visibility="ja" data-id="${g.id}" ${g.visibleJa !== false ? "checked" : ""} /> 일본</label>
+        </div>
+      </div>
       <button class="btn ghost" data-edit-game="${g.id}">수정</button>
       <button class="btn ghost" data-del-game="${g.id}">삭제</button>
     </article>
@@ -807,7 +832,12 @@ function bind() {
   const resetGamePaging = () => {};
 
   el("languageSelect").addEventListener("change", (e) => {
-    state.lang = e.target.value;
+    const nextLang = e.target.value;
+    state.selectedGameIds = state.selectedGameIds.filter((id) => {
+      const game = state.games.find((g) => g.id === id);
+      return game && isGameVisibleInLanguage(game, nextLang);
+    });
+    state.lang = nextLang;
     persist();
     render();
   });
@@ -942,6 +972,49 @@ function bind() {
     });
   }
 
+  document.body.addEventListener("change", async (e) => {
+    const toggle = e.target.closest("input[data-game-visibility]");
+    if (!toggle) return;
+
+    const game = state.games.find((g) => g.id === toggle.dataset.id);
+    if (!game) return;
+
+    const setting = toggle.dataset.gameVisibility;
+    const config = {
+      inactive: { column: "is_active", property: "isActive", value: !toggle.checked },
+      ko: { column: "visible_ko", property: "visibleKo", value: toggle.checked },
+      en: { column: "visible_en", property: "visibleEn", value: toggle.checked },
+      ja: { column: "visible_ja", property: "visibleJa", value: toggle.checked },
+    }[setting];
+    if (!config) return;
+
+    toggle.disabled = true;
+    const { error } = await supabaseClient
+      .from("games")
+      .update({ [config.column]: config.value })
+      .eq("id", game.id);
+
+    if (error) {
+      toggle.checked = !toggle.checked;
+      toggle.disabled = false;
+      const needsLanguageColumns = /visible_(ko|en|ja)/i.test(error.message || "");
+      alert(
+        needsLanguageColumns
+          ? "Supabase games 테이블에 언어 표시 컬럼이 필요합니다. 제공된 supabase-language-visibility.sql을 먼저 실행해주세요."
+          : `표시 설정 저장 실패\n${error.message || error}`
+      );
+      return;
+    }
+
+    game[config.property] = config.value;
+    state.selectedGameIds = state.selectedGameIds.filter((id) => {
+      const selected = state.games.find((g) => g.id === id);
+      return selected && isGameVisibleInLanguage(selected);
+    });
+    persist();
+    render();
+  });
+
   document.body.addEventListener("click", async (e) => {
     const addBtn = e.target.closest(".add-btn");
     if (addBtn) {
@@ -1047,13 +1120,17 @@ function bind() {
     const urlImage = el("boxImageUrl").value.trim();
     const imageUrl = fileImage || urlImage;
 
+    const existingGame = editingGameId ? state.games.find((g) => g.id === editingGameId) : null;
     const payload = {
       name_ko: el("boxNameKo").value,
       name_en: el("boxNameEn").value,
       name_ja: el("boxNameJa").value,
       length_cm: Number(el("boxLength").value),
       image_url: imageUrl || null,
-      is_active: true,
+      is_active: existingGame?.isActive !== false,
+      visible_ko: existingGame?.visibleKo !== false,
+      visible_en: existingGame?.visibleEn !== false,
+      visible_ja: existingGame?.visibleJa !== false,
     };
     const { error } = editingBoxId
       ? await supabaseClient.from("boxes").update(payload).eq("id", editingBoxId)
@@ -1107,6 +1184,9 @@ function bind() {
 
     if (error?.message?.includes("box_image_url")) {
       alert("Supabase games 테이블에 box_image_url 컬럼을 추가해주세요. SQL: alter table public.games add column if not exists box_image_url text;");
+    }
+    if (/visible_(ko|en|ja)/i.test(error?.message || "")) {
+      alert("Supabase games 테이블에 언어 표시 컬럼이 필요합니다. 제공된 supabase-language-visibility.sql을 먼저 실행해주세요.");
     }
     raiseIfError(error, editingGameId ? "게임 수정 실패" : "게임 추가 실패");
     await fetchSharedData();
