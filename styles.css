@@ -36,6 +36,33 @@ body {
   color: var(--text);
 }
 
+body > header,
+body > main,
+body > dialog {
+  transition: opacity 0.18s ease;
+}
+
+html.app-loading body > header,
+html.app-loading body > main,
+html.app-loading body > dialog {
+  visibility: hidden;
+  opacity: 0;
+}
+
+html.app-loading body::before {
+  content: "Loading...";
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  z-index: 9999;
+}
+
 img,
 video,
 canvas {
