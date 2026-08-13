@@ -40,7 +40,7 @@ const i18n = {
     dragHintTouch: "게임 카드의 '담기' 버튼으로 박스에 추가할 수 있어요.",
     cancel: "취소",
     login: "로그인",
-    sort_abc: "ABC순",
+    sort_abc: "가나다순",
     sort_thickness: "두께순",
   },
   en: {
