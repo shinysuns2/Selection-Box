@@ -130,12 +130,16 @@ const builtInContainers = [
     name: { ko: "blue container", en: "blue container", ja: "blue container" },
     lengthCm: CONTAINER_REFERENCE_LENGTH_CM,
     imageUrl: "",
+    databaseId: null,
+    isActive: true,
   },
   {
     id: "b2",
     name: { ko: "red container", en: "red container", ja: "red container" },
     lengthCm: 19.4,
     imageUrl: "",
+    databaseId: null,
+    isActive: true,
   },
 ];
 
@@ -366,10 +370,20 @@ function isUuid(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
 }
 
+function builtInContainerIdFor(box) {
+  if (box.id === "b1" || box.id === "b2") return box.id;
+  const names = Object.values(box.name || {})
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean);
+  if (names.includes("blue container")) return "b1";
+  if (names.includes("red container")) return "b2";
+  return null;
+}
+
 async function fetchSharedData() {
   const [catRes, boxRes, gameRes] = await Promise.all([
     supabaseClient.from("categories").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
-    supabaseClient.from("boxes").select("*").eq("is_active", true).order("created_at", { ascending: true }),
+    supabaseClient.from("boxes").select("*").order("created_at", { ascending: true }),
     supabaseClient.from("games").select("*").order("created_at", { ascending: true }),
   ]);
   raiseIfError(catRes.error, "카테고리 로딩 실패");
@@ -407,18 +421,30 @@ async function fetchSharedData() {
 
   const sharedBoxes = (boxes || []).map((b) => ({
       id: b.id,
+      databaseId: b.id,
       name: { ko: b.name_ko, en: b.name_en, ja: b.name_ja },
       lengthCm: Number(b.length_cm),
       imageUrl: b.image_url || "",
+      isActive: b.is_active !== false,
     }));
-  const builtInIds = new Set(builtInContainers.map((box) => box.id));
-  const sharedBoxesById = new Map(sharedBoxes.map((box) => [box.id, box]));
+  const sharedBuiltIns = new Map();
+  const customBoxes = [];
+  for (const box of sharedBoxes) {
+    const builtInId = builtInContainerIdFor(box);
+    if (builtInId) {
+      if (!sharedBuiltIns.has(builtInId)) sharedBuiltIns.set(builtInId, box);
+    } else {
+      customBoxes.push(box);
+    }
+  }
   state.boxes = builtInContainers
     .map((box) => ({
       ...box,
-      imageUrl: sharedBoxesById.get(box.id)?.imageUrl || box.imageUrl,
+      databaseId: sharedBuiltIns.get(box.id)?.databaseId || null,
+      imageUrl: sharedBuiltIns.get(box.id)?.imageUrl || box.imageUrl,
+      isActive: sharedBuiltIns.has(box.id) ? sharedBuiltIns.get(box.id).isActive : true,
     }))
-    .concat(sharedBoxes.filter((box) => !builtInIds.has(box.id)));
+    .concat(customBoxes);
 
   if (games?.length) {
     state.games = games.map((g) => ({
@@ -440,8 +466,8 @@ async function fetchSharedData() {
     }));
   }
 
-  if (!state.boxes.find((b) => b.id === state.selectedBoxId)) {
-    state.selectedBoxId = state.boxes[0]?.id || defaultState.selectedBoxId;
+  if (!activeBoxes().find((b) => b.id === state.selectedBoxId)) {
+    state.selectedBoxId = activeBoxes()[0]?.id || "";
   }
   state.selectedGameIds = state.selectedGameIds.filter((id) => {
     const game = state.games.find((g) => g.id === id);
@@ -453,7 +479,11 @@ async function fetchSharedData() {
 }
 
 function selectedBox() {
-  return state.boxes.find((b) => b.id === state.selectedBoxId) || state.boxes[0];
+  return activeBoxes().find((b) => b.id === state.selectedBoxId) || activeBoxes()[0] || null;
+}
+
+function activeBoxes() {
+  return state.boxes.filter((box) => box.isActive !== false);
 }
 
 function isGameVisibleInLanguage(game, lang = state.lang) {
@@ -571,8 +601,13 @@ function renderPromoLinks() {
 
 function renderSelectors() {
   const boxSel = el("boxSelect");
-  boxSel.innerHTML = state.boxes.map((b) => `<option value="${b.id}">${nameOf(b)} (${b.lengthCm}cm)</option>`).join("");
-  boxSel.value = selectedBox().id;
+  const visibleBoxes = activeBoxes();
+  const box = selectedBox();
+  boxSel.innerHTML = visibleBoxes.length
+    ? visibleBoxes.map((b) => `<option value="${b.id}">${nameOf(b)} (${b.lengthCm}cm)</option>`).join("")
+    : `<option value="">표시할 컨테이너 없음</option>`;
+  boxSel.disabled = !box;
+  boxSel.value = box?.id || "";
 
   const catSel = el("categorySelect");
   catSel.innerHTML = [`<option value="all">${text("all")}</option>`]
@@ -649,6 +684,17 @@ function renderGames() {
 
 function renderBox() {
   const box = selectedBox();
+  const boxVisual = el("boxVisual");
+  if (!box) {
+    boxVisual.style.display = "none";
+    el("usedValue").textContent = "0.0cm / 0cm";
+    el("remainingValue").textContent = "0.0cm";
+    el("fillValue").textContent = "0%";
+    el("progressBar").style.width = "0%";
+    el("selectedList").innerHTML = "";
+    return;
+  }
+  boxVisual.style.display = "";
   const used = calcUsed();
   const remain = box.lengthCm - used;
   const fill = Math.max(0, Math.min(100, (used / box.lengthCm) * 100));
@@ -656,7 +702,6 @@ function renderBox() {
     1,
     Math.min(100, (box.lengthCm / CONTAINER_REFERENCE_LENGTH_CM) * 100)
   );
-  const boxVisual = el("boxVisual");
   boxVisual.style.width = `${displayWidthPercent}%`;
   boxVisual.style.aspectRatio = `${box.lengthCm} / ${CONTAINER_HEIGHT_CM}`;
   boxVisual.style.marginLeft = "auto";
@@ -760,8 +805,9 @@ function renderRecommend() {
 
 function renderAdminLists() {
   el("boxAdminList").innerHTML = state.boxes.map((b) => `
-    <article class="card">
+    <article class="card admin-box-card ${b.isActive === false ? "is-inactive" : ""}">
       <div>${nameOf(b)} (${b.lengthCm}cm)</div>
+      <label class="visibility-option box-visibility-option"><input type="checkbox" data-box-visibility data-id="${b.id}" ${b.isActive !== false ? "checked" : ""} /> 표시</label>
       <button class="btn ghost" data-edit-box="${b.id}">수정</button>
       <button class="btn ghost" data-del-box="${b.id}">삭제</button>
     </article>
@@ -988,6 +1034,55 @@ function bind() {
   }
 
   document.body.addEventListener("change", async (e) => {
+    const boxToggle = e.target.closest("input[data-box-visibility]");
+    if (boxToggle) {
+      const box = state.boxes.find((item) => item.id === boxToggle.dataset.id);
+      if (!box) return;
+
+      const nextActive = boxToggle.checked;
+      boxToggle.disabled = true;
+      let result;
+      if (box.databaseId) {
+        result = await supabaseClient
+          .from("boxes")
+          .update({ is_active: nextActive })
+          .eq("id", box.databaseId)
+          .select("id");
+      } else {
+        result = await supabaseClient
+          .from("boxes")
+          .insert({
+            name_ko: box.name.ko,
+            name_en: box.name.en,
+            name_ja: box.name.ja,
+            length_cm: Number(box.lengthCm),
+            image_url: box.imageUrl || null,
+            is_active: nextActive,
+          })
+          .select("id")
+          .limit(1);
+      }
+
+      if (result.error || !result.data?.length) {
+        boxToggle.checked = !nextActive;
+        boxToggle.disabled = false;
+        alert(
+          `컨테이너 표시 설정 저장 실패\n${result.error?.message || "Supabase에서 변경된 행을 확인할 수 없습니다. boxes 테이블의 SELECT/UPDATE 정책을 확인해주세요."}`
+        );
+        return;
+      }
+
+      if (!box.databaseId) box.databaseId = result.data?.[0]?.id || null;
+      box.isActive = nextActive;
+      if (!nextActive && state.selectedBoxId === box.id) {
+        state.selectedBoxId = activeBoxes()[0]?.id || "";
+        state.selectedGameIds = [];
+      }
+      persist();
+      render();
+      return;
+    }
+
     const toggle = e.target.closest("input[data-game-visibility]");
     if (!toggle) return;
 
@@ -1052,10 +1147,12 @@ function bind() {
 
     const delBox = e.target.closest("[data-del-box]");
     if (delBox) {
-      const { error } = await supabaseClient.from("boxes").delete().eq("id", delBox.dataset.delBox);
+      const box = state.boxes.find((item) => item.id === delBox.dataset.delBox);
+      const databaseId = box?.databaseId || delBox.dataset.delBox;
+      const { error } = await supabaseClient.from("boxes").delete().eq("id", databaseId);
       raiseIfError(error, "박스 삭제 실패");
       await fetchSharedData();
-      state.selectedBoxId = state.boxes[0]?.id || defaultState.selectedBoxId;
+      state.selectedBoxId = activeBoxes()[0]?.id || "";
       persist();
       render();
       return;
@@ -1075,7 +1172,7 @@ function bind() {
     if (editBox) {
       const box = state.boxes.find((b) => b.id === editBox.dataset.editBox);
       if (!box) return;
-      editingBoxId = box.id;
+      editingBoxId = box.databaseId || box.id;
       el("boxNameKo").value = box.name.ko || "";
       el("boxNameEn").value = box.name.en || "";
       el("boxNameJa").value = box.name.ja || "";
@@ -1136,6 +1233,9 @@ function bind() {
     const fileImage = await fileToDataUrl(file);
     const urlImage = el("boxImageUrl").value.trim();
     const imageUrl = fileImage || urlImage;
+    const editingBox = state.boxes.find(
+      (box) => box.databaseId === editingBoxId || box.id === editingBoxId
+    );
 
     const payload = {
       name_ko: el("boxNameKo").value,
@@ -1143,7 +1243,7 @@ function bind() {
       name_ja: el("boxNameJa").value,
       length_cm: Number(el("boxLength").value),
       image_url: imageUrl || null,
-      is_active: true,
+      is_active: editingBox ? editingBox.isActive !== false : true,
     };
     const { error } = editingBoxId
       ? await supabaseClient.from("boxes").update(payload).eq("id", editingBoxId)
