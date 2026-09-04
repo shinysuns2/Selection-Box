@@ -539,6 +539,29 @@ dialog {
   accent-color: #ef4444;
 }
 
+.visibility-divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 2px;
+  background: var(--border);
+}
+
+.visibility-option.blue-option {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.visibility-option.blue-option input {
+  accent-color: #3b82f6;
+}
+
+.visibility-option.red-option {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.visibility-option.red-option input {
+  accent-color: #ef4444;
+}
+
 .admin-game-card.is-inactive .admin-game-title {
   color: var(--muted);
   text-decoration: line-through;
