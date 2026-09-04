@@ -40,7 +40,7 @@ const i18n = {
     dragHintTouch: "게임 카드의 '담기' 버튼으로 박스에 추가할 수 있어요.",
     cancel: "취소",
     login: "로그인",
-    sort_abc: "가나다순",
+    sort_abc: "ABC순",
     sort_thickness: "두께순",
   },
   en: {
@@ -435,6 +435,8 @@ async function fetchSharedData() {
       visibleKo: g.visible_ko !== false,
       visibleEn: g.visible_en !== false,
       visibleJa: g.visible_ja !== false,
+      visibleBlue: g.visible_blue !== false,
+      visibleRed: g.visible_red !== false,
     }));
   }
 
@@ -443,7 +445,7 @@ async function fetchSharedData() {
   }
   state.selectedGameIds = state.selectedGameIds.filter((id) => {
     const game = state.games.find((g) => g.id === id);
-    return game && isGameVisibleInLanguage(game);
+    return game && isGameVisible(game);
   });
 
   await fetchPromoLinks();
@@ -460,10 +462,20 @@ function isGameVisibleInLanguage(game, lang = state.lang) {
   return game[visibilityField] !== false;
 }
 
+function isGameVisibleInContainer(game, boxId = state.selectedBoxId) {
+  if (!game || game.isActive === false) return false;
+  const visibilityField = { b1: "visibleBlue", b2: "visibleRed" }[boxId];
+  return visibilityField ? game[visibilityField] !== false : true;
+}
+
+function isGameVisible(game, lang = state.lang, boxId = state.selectedBoxId) {
+  return isGameVisibleInLanguage(game, lang) && isGameVisibleInContainer(game, boxId);
+}
+
 function selectedGames() {
   return state.selectedGameIds
     .map((id) => state.games.find((g) => g.id === id))
-    .filter((game) => isGameVisibleInLanguage(game));
+    .filter((game) => isGameVisible(game));
 }
 
 function calcUsed() {
@@ -598,7 +610,7 @@ function renderGames() {
   const q = el("searchInput").value?.trim().toLowerCase() || "";
 
   const list = state.games
-    .filter((g) => isGameVisibleInLanguage(g))
+    .filter((g) => isGameVisible(g))
     .filter((g) => {
       const categoryOk = state.selectedCategory === "all" || g.categoryId === state.selectedCategory;
       const playersOk =
@@ -704,7 +716,7 @@ function recommendGames() {
   const recommendLimit = window.matchMedia("(max-width: 768px)").matches ? 3 : 5;
 
   return state.games
-    .filter((g) => isGameVisibleInLanguage(g))
+    .filter((g) => isGameVisible(g))
     .filter((g) => !pickedIds.has(g.id))
     .filter((g) => remain >= Number(g.lengthCm))
     .map((g) => {
@@ -759,11 +771,14 @@ function renderAdminLists() {
     <article class="card admin-game-card ${g.isActive === false ? "is-inactive" : ""}">
       <div class="admin-game-main">
         <div class="admin-game-title">${nameOf(g)} (${g.lengthCm}cm · ${g.playersMin}~${g.playersMax}p · ${difficultyLabel(g.difficulty)})</div>
-        <div class="game-visibility-controls" aria-label="게임 언어별 표시 설정">
+        <div class="game-visibility-controls" aria-label="게임 공개 설정">
           <label class="visibility-option inactive-option"><input type="checkbox" data-game-visibility="inactive" data-id="${g.id}" ${g.isActive === false ? "checked" : ""} /> 비활성</label>
           <label class="visibility-option"><input type="checkbox" data-game-visibility="ko" data-id="${g.id}" ${g.visibleKo !== false ? "checked" : ""} /> 한글</label>
           <label class="visibility-option"><input type="checkbox" data-game-visibility="en" data-id="${g.id}" ${g.visibleEn !== false ? "checked" : ""} /> 미국</label>
           <label class="visibility-option"><input type="checkbox" data-game-visibility="ja" data-id="${g.id}" ${g.visibleJa !== false ? "checked" : ""} /> 일본</label>
+          <span class="visibility-divider" aria-hidden="true"></span>
+          <label class="visibility-option blue-option"><input type="checkbox" data-game-visibility="blue" data-id="${g.id}" ${g.visibleBlue !== false ? "checked" : ""} /> Blue</label>
+          <label class="visibility-option red-option"><input type="checkbox" data-game-visibility="red" data-id="${g.id}" ${g.visibleRed !== false ? "checked" : ""} /> Red</label>
         </div>
       </div>
       <button class="btn ghost" data-edit-game="${g.id}">수정</button>
@@ -835,7 +850,7 @@ function bind() {
     const nextLang = e.target.value;
     state.selectedGameIds = state.selectedGameIds.filter((id) => {
       const game = state.games.find((g) => g.id === id);
-      return game && isGameVisibleInLanguage(game, nextLang);
+      return game && isGameVisible(game, nextLang, state.selectedBoxId);
     });
     state.lang = nextLang;
     persist();
@@ -985,6 +1000,8 @@ function bind() {
       ko: { column: "visible_ko", property: "visibleKo", value: toggle.checked },
       en: { column: "visible_en", property: "visibleEn", value: toggle.checked },
       ja: { column: "visible_ja", property: "visibleJa", value: toggle.checked },
+      blue: { column: "visible_blue", property: "visibleBlue", value: toggle.checked },
+      red: { column: "visible_red", property: "visibleRed", value: toggle.checked },
     }[setting];
     if (!config) return;
 
@@ -997,10 +1014,10 @@ function bind() {
     if (error) {
       toggle.checked = !toggle.checked;
       toggle.disabled = false;
-      const needsLanguageColumns = /visible_(ko|en|ja)/i.test(error.message || "");
+      const needsVisibilityColumns = /visible_(ko|en|ja|blue|red)/i.test(error.message || "");
       alert(
-        needsLanguageColumns
-          ? "Supabase games 테이블에 언어 표시 컬럼이 필요합니다. 제공된 supabase-language-visibility.sql을 먼저 실행해주세요."
+        needsVisibilityColumns
+          ? "Supabase games 테이블에 공개 설정 컬럼이 필요합니다. 제공된 SQL 파일을 먼저 실행해주세요."
           : `표시 설정 저장 실패\n${error.message || error}`
       );
       return;
@@ -1009,7 +1026,7 @@ function bind() {
     game[config.property] = config.value;
     state.selectedGameIds = state.selectedGameIds.filter((id) => {
       const selected = state.games.find((g) => g.id === id);
-      return selected && isGameVisibleInLanguage(selected);
+      return selected && isGameVisible(selected);
     });
     persist();
     render();
@@ -1120,17 +1137,13 @@ function bind() {
     const urlImage = el("boxImageUrl").value.trim();
     const imageUrl = fileImage || urlImage;
 
-    const existingGame = editingGameId ? state.games.find((g) => g.id === editingGameId) : null;
     const payload = {
       name_ko: el("boxNameKo").value,
       name_en: el("boxNameEn").value,
       name_ja: el("boxNameJa").value,
       length_cm: Number(el("boxLength").value),
       image_url: imageUrl || null,
-      is_active: existingGame?.isActive !== false,
-      visible_ko: existingGame?.visibleKo !== false,
-      visible_en: existingGame?.visibleEn !== false,
-      visible_ja: existingGame?.visibleJa !== false,
+      is_active: true,
     };
     const { error } = editingBoxId
       ? await supabaseClient.from("boxes").update(payload).eq("id", editingBoxId)
@@ -1165,6 +1178,7 @@ function bind() {
       console.warn("Category UUID missing. Saving game without category_id.");
     }
 
+    const existingGame = editingGameId ? state.games.find((g) => g.id === editingGameId) : null;
     const payload = {
       name_ko: el("gameNameKo").value,
       name_en: el("gameNameEn").value,
@@ -1176,7 +1190,12 @@ function bind() {
       difficulty: Number(el("gameDifficulty").value),
       image_url: listImageUrl,
       box_image_url: boxImageUrl,
-      is_active: true,
+      is_active: existingGame?.isActive !== false,
+      visible_ko: existingGame?.visibleKo !== false,
+      visible_en: existingGame?.visibleEn !== false,
+      visible_ja: existingGame?.visibleJa !== false,
+      visible_blue: existingGame?.visibleBlue !== false,
+      visible_red: existingGame?.visibleRed !== false,
     };
     const { error } = editingGameId
       ? await supabaseClient.from("games").update(payload).eq("id", editingGameId)
@@ -1185,8 +1204,8 @@ function bind() {
     if (error?.message?.includes("box_image_url")) {
       alert("Supabase games 테이블에 box_image_url 컬럼을 추가해주세요. SQL: alter table public.games add column if not exists box_image_url text;");
     }
-    if (/visible_(ko|en|ja)/i.test(error?.message || "")) {
-      alert("Supabase games 테이블에 언어 표시 컬럼이 필요합니다. 제공된 supabase-language-visibility.sql을 먼저 실행해주세요.");
+    if (/visible_(ko|en|ja|blue|red)/i.test(error?.message || "")) {
+      alert("Supabase games 테이블에 공개 설정 컬럼이 필요합니다. 제공된 SQL 파일을 먼저 실행해주세요.");
     }
     raiseIfError(error, editingGameId ? "게임 수정 실패" : "게임 추가 실패");
     await fetchSharedData();
