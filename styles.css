@@ -488,6 +488,23 @@ dialog {
   grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
+.compact .admin-box-card {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+}
+
+.admin-box-card.is-inactive > div:first-child {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.box-visibility-option {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.box-visibility-option input {
+  accent-color: #22c55e;
+}
+
 .admin-game-main {
   min-width: 0;
   display: flex;
