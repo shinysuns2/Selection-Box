@@ -1066,8 +1066,13 @@ function bind() {
       if (result.error || !result.data?.length) {
         boxToggle.checked = !nextActive;
         boxToggle.disabled = false;
+        const isPermissionError =
+          result.error?.code === "42501" ||
+          /row-level security|permission denied/i.test(result.error?.message || "");
         alert(
-          `컨테이너 표시 설정 저장 실패\n${result.error?.message || "Supabase에서 변경된 행을 확인할 수 없습니다. boxes 테이블의 SELECT/UPDATE 정책을 확인해주세요."}`
+          isPermissionError
+            ? `컨테이너 표시 설정 저장 실패\nSupabase SQL Editor에서 supabase-box-management-rls.sql 파일을 먼저 실행해주세요.\n\n${result.error.message}`
+            : `컨테이너 표시 설정 저장 실패\n${result.error?.message || "Supabase에서 변경된 행을 확인할 수 없습니다. boxes 테이블의 SELECT/UPDATE 정책을 확인해주세요."}`
         );
         return;
       }
